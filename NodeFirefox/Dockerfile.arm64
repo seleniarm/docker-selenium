@@ -3,6 +3,8 @@
 
 USER root
 
+ARG TARGETARCH
+
 #=========
 # Firefox
 #=========
@@ -13,6 +15,12 @@ RUN echo "deb http://ftp.hk.debian.org/debian/ sid main" >> /etc/apt/sources.lis
 
 # geckodriver was built using the local-seleniarm/geckodriver-arm64 Debian image
 COPY geckodriver /usr/local/bin/
+
+RUN \
+  if [ "$(TARGETARCH)" = "amd64" ]; then \
+    curl -L https://github.com/mozilla/geckodriver/releases/download/v0.30.0/geckodriver-v0.30.0-linux64.tar.gz -o geckodriver.tar.gz \
+      && tar xvfz geckodriver.tar.gz -C /usr/local/bin/ \
+  fi
 
 USER 1200
 
