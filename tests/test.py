@@ -3,6 +3,8 @@ import os
 import random
 import sys
 import unittest
+import requests
+import time
 
 import docker
 from docker.errors import NotFound
@@ -22,6 +24,7 @@ http_proxy = os.environ.get('http_proxy', '')
 https_proxy = os.environ.get('https_proxy', '')
 no_proxy = os.environ.get('no_proxy', '')
 SKIP_BUILD = os.environ.get('SKIP_BUILD', False)
+PLATFORM = os.environ.get('PLATFORM', '')
 
 IMAGE_NAME_MAP = {
     # Hub
@@ -106,6 +109,12 @@ def prune_networks():
     client.networks.prune()
 
 
+def wait_for_grid(platform):
+    if platform != '':
+        logger.info('Starting container on platform %s so we will wait 10 more seconds since emulation is slower...' % platform)
+        time.sleep(10)
+
+
 def launch_container(container, **kwargs):
     """
     Launch a specific container
@@ -150,6 +159,7 @@ if __name__ == '__main__':
     use_random_user_id = USE_RANDOM_USER_ID == 'true'
     run_in_docker_compose = RUN_IN_DOCKER_COMPOSE == 'true'
     random_user_id = random.randint(100000, 2147483647)
+    platform = PLATFORM 
 
     if use_random_user_id:
         logger.info("Running tests with a random user ID -> %s" % random_user_id)
@@ -171,9 +181,12 @@ if __name__ == '__main__':
             """
             ports = {'4444': 4444}
             if use_random_user_id:
-               test_container_id = launch_container(image, ports=ports, user=random_user_id)
+               test_container_id = launch_container(image, ports=ports, user=random_user_id, platform=platform)
             else:
-               test_container_id = launch_container(image, ports=ports)
+               test_container_id = launch_container(image, ports=ports,platform=platform)
+        
+            wait_for_grid(platform)
+
         else:
             """
             Hub / Node Configuration
@@ -183,10 +196,12 @@ if __name__ == '__main__':
             hub_id = launch_hub("grid")
             ports = {'5555': 5555, '7900': 7900}
             if use_random_user_id:
-               test_container_id = launch_container(image, network='grid', ports=ports, user=random_user_id)
+               test_container_id = launch_container(image, network='grid', ports=ports, user=random_user_id, platform=platform)
             else:
-               test_container_id = launch_container(image, network='grid', ports=ports)
+               test_container_id = launch_container(image, network='grid', ports=ports, platform=platform)
             prune_networks()
+
+            wait_for_grid(platform)
 
         logger.info('========== / Containers ready to go ==========')
 
