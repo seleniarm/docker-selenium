@@ -2,8 +2,8 @@
 # NOTE: DO *NOT* EDIT THIS FILE.  IT IS GENERATED.
 # PLEASE UPDATE Dockerfile.txt INSTEAD OF THIS FILE
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-FROM selenium/node-firefox:multi-arch-tests-20220327
-LABEL authors=SeleniumHQ
+FROM seleniarm/node-firefox:4.1.3-20220331
+LABEL authors=SeleniumHQ,sj26,jamesmortensen
 
 USER 1200
 

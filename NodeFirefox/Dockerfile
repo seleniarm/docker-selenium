@@ -2,8 +2,8 @@
 # NOTE: DO *NOT* EDIT THIS FILE.  IT IS GENERATED.
 # PLEASE UPDATE Dockerfile.txt INSTEAD OF THIS FILE
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-FROM selenium/node-base:multi-arch-tests-20220327
-LABEL authors=SeleniumHQ
+FROM seleniarm/node-base:4.1.3-20220331
+LABEL authors=SeleniumHQ,sj26,jamesmortensen
 
 #FROM local-seleniarm/node-base:4.0.0-20211018
 #LABEL authors=SeleniumHQ,sj26,jamesmortensen
@@ -16,11 +16,19 @@ USER root
 #=========
 # Firefox
 #=========
+#RUN echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list \
+  # && apt-get update -qqy \
+  # && apt-get -qqy install firefox-esr libavcodec-extra \
+  # && apt-get -qqy install firefox libavcodec-extra \
+  # && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+# Temporarily installing Firefox 96.0.3 from snapshots since 98.0.2 is broken on arm64
 RUN echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list \
   && apt-get update -qqy \
-  && apt-get -qqy install firefox-esr libavcodec-extra \
-  # && apt-get -qqy install firefox libavcodec-extra \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+  && apt-get install libavcodec-extra -y \
+  && wget https://snapshot.debian.org/archive/debian/20220209T093507Z/pool/main/f/firefox/firefox_96.0.3-1_`dpkg --print-architecture`.deb -O firefox.deb \
+  && apt install ./firefox.deb -y \
+  && rm -rf /var/lib/apt/lists/* /var/cache/apt/* ./firefox.deb
 
 #=============
 # geckodriver
@@ -34,8 +42,10 @@ RUN if [ $TARGETARCH = "arm" ] && [ $TARGETVARIANT = "v7" ]; then \
        echo "*** BUILD ERROR: \$TARGETARCH must be arm64, amd64, or arm with \$TARGETVARIANT set to v7... exiting..." ; \
        exit 1 ; \
     fi ; \
-    if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "armhf" ]; then \
+    if [ "$ARCH" = "arm64" ]; then \ 
        wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/jamesmortensen/geckodriver-arm-binaries/releases/download/v0.30.0/geckodriver-v0.30.0-linux-aarch64.tar.gz ; \
+    elif [ "$ARCH" = "armhf" ]; then \
+       wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/jamesmortensen/geckodriver-arm-binaries/releases/download/v0.30.0/geckodriver-v0.30.0-linux-armv7l.tar.gz ; \
     else \
        wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/mozilla/geckodriver/releases/download/v0.30.0/geckodriver-v0.30.0-linux64.tar.gz ; \
     fi ; \
@@ -44,12 +54,8 @@ RUN if [ $TARGETARCH = "arm" ] && [ $TARGETVARIANT = "v7" ]; then \
     mkdir -p /opt/geckodriver-bin ; \
     mv /tmp/geckodriver /opt/geckodriver-bin/geckodriver ; \
     echo "Symlinking geckodriver to /usr/local/bin/geckodriver" ; \
-    ln -s /opt/geckodriver-bin/geckodriver /usr/local/bin/geckodriver-orig ; \
-    chmod 755 /usr/local/bin/geckodriver-orig
-
-COPY geckodriver-armhf /usr/local/bin/geckodriver
-
-RUN chmod 755 /usr/local/bin/geckodriver && apt-get update -y && apt-get install file -y
+    ln -s /opt/geckodriver-bin/geckodriver /usr/local/bin/geckodriver ; \
+    chmod 755 /usr/local/bin/geckodriver
 
 USER 1200
 
