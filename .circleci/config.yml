@@ -25,6 +25,27 @@ jobs:
       PLATFORMS: << parameters.platforms >>
     steps:
       - run:
+          name: Start VM if armv7l
+          command: |
+            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+                echo "Download armv7l VM..."
+                curl -L https://github.com/jamesmortensen/virtual-machine-releases/releases/download/debian-11.3-armhf-ci-v1.0/debian-11.3-armhf-ci-v1.0.tar.xz \
+                  -o debian-11.3-armhf-ci-v1.0.tar.xz
+                echo "Extract VM..."
+                tar xvfJ debian-11.3-armhf-ci-v1.0.tar.xz
+                cd debian-11.3-armhf-ci
+                echo "Install QEMU binaries"
+                curl -L  https://github.com/xpack-dev-tools/qemu-arm-xpack/releases/download/v6.2.0-2/xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz -o xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
+                  && tar xvfz xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
+                  && echo "export PATH=$PWD/xpack-qemu-arm-6.2.0-2/bin:$PATH" > ~/.bashrc \
+                  && source ~/.bashrc \
+                  && qemu-system-arm --version
+                bash start-vm-and-tunnels.sh
+                cd ..
+                echo 'export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock' >> $BASH_ENV
+                source $BASH_ENV
+            fi
+      - run:
           name: "Prepare workflow environment variables"
           command: |
             echo 'export BRANCH="$CIRCLE_BRANCH"' >> $BASH_ENV
@@ -79,6 +100,17 @@ jobs:
       - restore_cache:
           keys: 
             - multi-arch-images-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-<< parameters.platforms >>
+      - run:
+          name: Start VM if armv7l and connect to Docker socket with SSH port forwarding
+          command: |
+            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+                curl -L https://github.com/jamesmortensen/virtual-machine-releases/releases/download/debian-11.3-armhf-ci-v1.0/debian-11.3-armhf-ci-v1.0.tar.xz -o debian-11.3-armhf-ci-v1.0.tar.xz
+                tar xvfJ debian-11.3-armhf-ci-v1.0.tar.xz
+                cd debian-11.3-armhf-ci
+                bash start-vm-and-tunnels.sh
+                ssh -p 8022 debianhf@127.0.0.1 -N -f -L4444:127.0.0.1:4444 -L5555:127.0.0.1:5555
+                cd ..
+            fi
       - run: uname -a
       - run: docker info
       - run:
@@ -187,6 +219,10 @@ workflows:
           name: build-multi-arch-amd64
           platforms: linux/amd64
           machine-type: ubuntu2004amd64
+      - build-multi-arch:
+          name: build-multi-arch-armv7l
+          platforms: linux/arm/v7
+          machine-type: ubuntu2004arm64
       - test-multi-arch:
           name: test-multi-arch-arm64
           requires: [build-multi-arch-arm64]
@@ -197,6 +233,11 @@ workflows:
           requires: [build-multi-arch-amd64]
           platforms: linux/amd64
           machine-type: ubuntu2004amd64
+      - test-multi-arch:
+          name: test-multi-arch-armv7l
+          requires: [build-multi-arch-armv7l]
+          platforms: linux/arm/v7
+          machine-type: ubuntu2004arm64
   
   deploy-multi-arch:
     jobs:
