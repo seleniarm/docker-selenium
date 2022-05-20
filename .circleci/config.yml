@@ -144,6 +144,7 @@ jobs:
           background: true
       - run:
           name: Wait for VM if armv7l
+          command: |
             if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
                 cd ~/debian-11.3-armhf-ci
                 sed -i 's/sh start-vm.sh//g' start-vm-and-tunnels.sh && mv start-vm-and-tunnels.sh wait-for-vm-boot.sh
