@@ -25,22 +25,37 @@ jobs:
       PLATFORMS: << parameters.platforms >>
     steps:
       - run:
-          name: Start VM if armv7l
+          name: Download VM if armv7l
           command: |
             if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
                 echo "Download armv7l VM..."
+                cd ~
                 curl -L https://github.com/jamesmortensen/virtual-machine-releases/releases/download/debian-11.3-armhf-ci-v1.0/debian-11.3-armhf-ci-v1.0.tar.xz \
                   -o debian-11.3-armhf-ci-v1.0.tar.xz
                 echo "Extract VM..."
                 tar xvfJ debian-11.3-armhf-ci-v1.0.tar.xz
-                cd debian-11.3-armhf-ci
+                rm debian-11.3-armhf-ci-v1.0.tar.xz
+            fi
+      - run:
+          name: Start VM if armv7l
+          command: |
+            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+                cd ~/debian-11.3-armhf-ci
+                sh start-vm.sh
+            fi
+          background: true
+      - run:
+          name: Wait for VM if armv7l
+            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+                cd ~/debian-11.3-armhf-ci
                 echo "Install QEMU binaries"
                 curl -L  https://github.com/xpack-dev-tools/qemu-arm-xpack/releases/download/v6.2.0-2/xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz -o xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
                   && tar xvfz xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
                   && echo "export PATH=$PWD/xpack-qemu-arm-6.2.0-2/bin:$PATH" > ~/.bashrc \
                   && source ~/.bashrc \
                   && qemu-system-arm --version
-                bash start-vm-and-tunnels.sh
+                sed -i 's/sh start-vm.sh//g' start-vm-and-tunnels.sh && mv start-vm-and-tunnels.sh wait-for-vm-boot.sh
+                bash wait-for-vm-boot.sh 
                 cd ..
                 echo 'export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock' >> $BASH_ENV
                 source $BASH_ENV
