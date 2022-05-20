@@ -25,7 +25,7 @@ jobs:
       PLATFORMS: << parameters.platforms >>
     steps:
       - run:
-          name: Download VM and install qemu, if armv7l
+          name: Download VM and install qemu if armv7l
           command: |
             if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
                 echo "Download armv7l VM..."
