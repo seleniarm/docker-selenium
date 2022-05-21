@@ -196,15 +196,18 @@ jobs:
           name: "Test Docker images"
           no_output_timeout: 2m
           command: |
-            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
-                export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
+            if [ "$CIRCLE_JOB" = "test-multi-arch-armv7l" ]; then
+                # export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
                 export GRID_STATUS_MAX_ATTEMPTS=15
                 export PLATFORM=linux/arm/v7
             fi
             export USE_RANDOM_USER=false
             export BRANCH=$CIRCLE_BRANCH
             USE_RANDOM_USER_ID=${USE_RANDOM_USER} NAMESPACE=${NAMESPACE} VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} SKIP_BUILD=true make test_multi_arch
+            docker run --rm --privileged aptman/qus -- -r
+            docker run --rm --privileged aptman/qus -s -- -p
             docker run --platform linux/arm/v7 --rm seleniarm/standalone-firefox:armv7-tests-today arch
+            docker run --platform linux/arm/v7 --rm seleniarm/standalone-firefox:latest arch
 
   deploy-multi-arch:
     parameters:
