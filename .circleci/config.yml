@@ -28,12 +28,14 @@ jobs:
           name: "Prepare workflow environment variables"
           command: |
             if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+                echo "Set DOCKER_HOST to unix:///tmp/docker-on-debianhf"
                 echo 'export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock' >> $BASH_ENV
             fi
             echo 'export BRANCH="$CIRCLE_BRANCH"' >> $BASH_ENV
             cat $BASH_ENV
             source $BASH_ENV
             echo "Workflow environment variables:"
+            echo $DOCKER_HOST
             echo $BRANCH
       - run: uname -a
       - run:
@@ -60,12 +62,15 @@ jobs:
             if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
                 cd ~/debian-11.3-armhf-ci
                 sh start-vm.sh
+                sleep 4
+                pgrep qemu
             fi
           background: true
       - run:
           name: Wait for VM if armv7l
           command: |
             if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+                echo "Wait for VM to boot..."
                 pgrep qemu
                 cd ~/debian-11.3-armhf-ci
                 sed -i 's/sh start-vm.sh//g' start-vm-and-tunnels.sh && mv start-vm-and-tunnels.sh wait-for-vm-boot.sh
