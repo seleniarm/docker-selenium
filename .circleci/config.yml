@@ -83,7 +83,10 @@ jobs:
       - run:
           name: "Build Docker images"
           command: |
+            export BRANCH=$CIRCLE_BRANCH
+            export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
             echo "Branch is $BRANCH"
+            echo "DOCKER_HOST is $DOCKER_HOST"
             NAME=${NAMESPACE} VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} PLATFORMS=${PLATFORMS} BUILD_ARGS=${BUILD_ARGS} make build_multi
       - run:
           name: "Save Docker Images in Cache"
