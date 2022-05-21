@@ -63,6 +63,10 @@ jobs:
                 echo "Start the armv7l VM with qemu-system-arm..."
                 cd ~/debian-11.3-armhf-ci
                 sed -i 's/&//g' start-vm.sh
+                sed -i 's/qemu-system-arm/qemu-system-aarch64 -enable-kvm' start-vm.sh
+                sed -i 's/-m 1024/-m 6144/' start-vm.sh
+                sed -i 's/cpus=4,sockets=1,cores=4/cpus=2,sockets=1,cores=4/g' start-vm.sh
+                sed -i 's/-cpu cortex-a15/-cpu host/g' start-vm.sh
                 sh start-vm.sh
                 echo "Process blocking since running in the background..."
             fi
@@ -87,10 +91,10 @@ jobs:
             export BRANCH=$CIRCLE_BRANCH
             if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
                 export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
+                ls /tmp/docker-on-debianhf.sock
             fi
             echo "Branch is $BRANCH"
             echo "DOCKER_HOST is $DOCKER_HOST"
-            ls /tmp/docker-on-debianhf.sock
             docker info
             NAME=${NAMESPACE} VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} PLATFORMS=${PLATFORMS} BUILD_ARGS=${BUILD_ARGS} make build_multi
       - run:
