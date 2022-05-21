@@ -201,10 +201,10 @@ jobs:
                 export GRID_STATUS_MAX_ATTEMPTS=15
                 export PLATFORM=linux/arm/v7
             fi
-            docker run --rm seleniarm/standalone-firefox:armv7-tests-today arch
             export USE_RANDOM_USER=false
             export BRANCH=$CIRCLE_BRANCH
             USE_RANDOM_USER_ID=${USE_RANDOM_USER} NAMESPACE=${NAMESPACE} VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} SKIP_BUILD=true make test_multi_arch
+            docker run --platform linux/arm/v7 --rm seleniarm/standalone-firefox:armv7-tests-today arch
 
   deploy-multi-arch:
     parameters:
