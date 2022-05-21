@@ -81,11 +81,53 @@ jobs:
           keys: 
             # - multi-arch-images-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-<< parameters.platforms >>
             - multi-arch-images-{{ .Branch }}-d9897deb-4482-4d3a-b3cf-b9b36b69df31-<< parameters.platforms >>
+      - run:
+          name: Download VM and install qemu, if armv7l
+          command: |
+            if [ "$CIRCLE_JOB" = "test-multi-arch-armv7l" ]; then
+                echo "Download armv7l VM..."
+                cd ~
+                curl -L https://github.com/jamesmortensen/virtual-machine-releases/releases/download/debian-11.3-armhf-ci-v1.0/debian-11.3-armhf-ci-v1.0.tar.xz \
+                  -o debian-11.3-armhf-ci-v1.0.tar.xz
+                echo "Extract VM..."
+                tar xvfJ debian-11.3-armhf-ci-v1.0.tar.xz
+                rm debian-11.3-armhf-ci-v1.0.tar.xz
+                echo "Install QEMU binaries"
+                curl -L  https://github.com/xpack-dev-tools/qemu-arm-xpack/releases/download/v6.2.0-2/xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz -o xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
+                  && tar xvfz xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
+                  && echo "export PATH=$PWD/xpack-qemu-arm-6.2.0-2/bin:$PATH" > ~/.bashrc \
+                  && source ~/.bashrc \
+                  && qemu-system-arm --version
+            fi
+      - run:
+          name: Start VM if armv7l
+          command: |
+            if [ "$CIRCLE_JOB" = "test-multi-arch-armv7l" ]; then
+                cd ~/debian-11.3-armhf-ci
+                sed -i 's/&//g' start-vm.sh
+                sed -i 's/-m 1024/-m 6144/' start-vm.sh
+                sh start-vm.sh
+            fi
+          background: true
+      - run:
+          name: Wait for VM if armv7l
+          command: |
+            if [ "$CIRCLE_JOB" = "test-multi-arch-armv7l" ]; then
+                cd ~/debian-11.3-armhf-ci
+                sed -i 's/sh start-vm.sh//g' start-vm-and-tunnels.sh && mv start-vm-and-tunnels.sh wait-for-vm-boot.sh
+                bash wait-for-vm-boot.sh 
+                cd ..
+                echo 'export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock' >> $BASH_ENV
+                source $BASH_ENV
+            fi
       - run: uname -a
       - run: docker info
       - run:
           name: "Load built images from cache into Docker"
           command: |
+            if [ "$CIRCLE_JOB" = "test-multi-arch-armv7l" ]; then
+                export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
+            fi
             echo "CIRCLE_WORKFLOW_ID = " $CIRCLE_WORKFLOW_ID
             docker load -i multi-arch-images.tar
       - run:
@@ -100,6 +142,7 @@ jobs:
           no_output_timeout: 2m
           command: |
             if [ "$CIRCLE_JOB" = "test-multi-arch-armv7l" ]; then
+                export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
                 export GRID_STATUS_MAX_ATTEMPTS=15
                 export PLATFORM=linux/arm/v7
             fi
@@ -110,6 +153,9 @@ jobs:
             # docker run --rm --privileged aptman/qus -s -- -p
             docker run --platform linux/arm/v7 --rm seleniarm/standalone-firefox:armv7-tests-today arch
             docker run --platform linux/arm/v7 --rm seleniarm/standalone-firefox:latest arch
+            if [ "$CIRCLE_JOB" = "test-multi-arch-armv7l" ]; then
+                sh stop-vm.sh
+            fi
 
   deploy-multi-arch:
     parameters:
