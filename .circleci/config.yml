@@ -60,10 +60,11 @@ jobs:
           name: Start VM if armv7l
           command: |
             if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+                echo "Start the armv7l VM with qemu-system-arm..."
                 cd ~/debian-11.3-armhf-ci
+                sed -i 's/&//g' start-vm.sh
                 sh start-vm.sh
-                sleep 4
-                pgrep qemu
+                echo "Process blocking since running in the background..."
             fi
           background: true
       - run:
