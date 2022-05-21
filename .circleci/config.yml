@@ -119,6 +119,7 @@ jobs:
                 cd ..
                 echo 'export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock' >> $BASH_ENV
                 source $BASH_ENV
+                ssh -p 8022 debianhf@127.0.0.1 -N -f -L4444:127.0.0.1:4444 -L5555:127.0.0.1:5555 -L7900:127.0.0.1:7900
             fi
       - run: uname -a
       - run: docker info
