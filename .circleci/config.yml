@@ -62,11 +62,16 @@ jobs:
             if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
                 echo "Start the armv7l VM with qemu-system-arm..."
                 cd ~/debian-11.3-armhf-ci
+                echo "does it support kvm? "
+                cat /proc/cpuinfo
+                grep -E 'svm|vmx' /proc/cpuinfo
+                egrep -c '(vmx|svm)' /proc/cpuinfo
                 sed -i 's/&//g' start-vm.sh
                 sed -i 's/qemu-system-arm/qemu-system-aarch64 -enable-kvm/' start-vm.sh
                 sed -i 's/-m 1024/-m 6144/' start-vm.sh
                 #sed -i 's/cpus=4,sockets=1,cores=4/cpus=2/g' start-vm.sh
                 sed -i 's/-cpu cortex-a15/-cpu host,aarch64=off/g' start-vm.sh
+                cat start-vm.sh
                 sh start-vm.sh
                 echo "Process blocking since running in the background..."
             fi
