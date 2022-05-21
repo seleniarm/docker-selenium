@@ -76,6 +76,7 @@ jobs:
                 cd ~/debian-11.3-armhf-ci
                 sed -i 's/sh start-vm.sh//g' start-vm-and-tunnels.sh && mv start-vm-and-tunnels.sh wait-for-vm-boot.sh
                 bash wait-for-vm-boot.sh 
+                ls /tmp/docker-on-debianhf.sock
                 cd ..
             fi
       - run: docker info
@@ -84,9 +85,13 @@ jobs:
           name: "Build Docker images"
           command: |
             export BRANCH=$CIRCLE_BRANCH
-            export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
+            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+                export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
+            fi
             echo "Branch is $BRANCH"
             echo "DOCKER_HOST is $DOCKER_HOST"
+            ls /tmp/docker-on-debianhf.sock
+            docker info
             NAME=${NAMESPACE} VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} PLATFORMS=${PLATFORMS} BUILD_ARGS=${BUILD_ARGS} make build_multi
       - run:
           name: "Save Docker Images in Cache"
