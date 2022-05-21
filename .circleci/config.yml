@@ -27,10 +27,10 @@ jobs:
       - run:
           name: "Prepare workflow environment variables"
           command: |
-            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
-                echo "Set DOCKER_HOST to unix:///tmp/docker-on-debianhf"
-                echo 'export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock' >> $BASH_ENV
-            fi
+            # if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+            #     echo "Set DOCKER_HOST to unix:///tmp/docker-on-debianhf"
+            #     echo 'export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock' >> $BASH_ENV
+            # fi
             echo 'export BRANCH="$CIRCLE_BRANCH"' >> $BASH_ENV
             cat $BASH_ENV
             source $BASH_ENV
@@ -38,66 +38,62 @@ jobs:
             echo $DOCKER_HOST
             echo $BRANCH
       - run: uname -a
-      - run:
-          name: Download VM and install qemu if armv7l
-          command: |
-            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
-                echo "Download armv7l VM..."
-                cd ~
-                curl -L https://github.com/jamesmortensen/virtual-machine-releases/releases/download/debian-11.3-armhf-ci-v1.0/debian-11.3-armhf-ci-v1.0.tar.xz \
-                  -o debian-11.3-armhf-ci-v1.0.tar.xz
-                echo "Extract VM..."
-                tar xvfJ debian-11.3-armhf-ci-v1.0.tar.xz
-                rm debian-11.3-armhf-ci-v1.0.tar.xz
-                echo "Install QEMU binaries"
-                curl -L  https://github.com/xpack-dev-tools/qemu-arm-xpack/releases/download/v6.2.0-2/xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz -o xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
-                  && tar xvfz xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
-                  && echo "export PATH=$PWD/xpack-qemu-arm-6.2.0-2/bin:$PATH" > ~/.bashrc \
-                  && source ~/.bashrc \
-                  && qemu-system-arm --version
-            fi
-      - run:
-          name: Start VM if armv7l
-          command: |
-            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
-                echo "Start the armv7l VM with qemu-system-arm..."
-                cd ~/debian-11.3-armhf-ci
-                echo "does it support kvm? "
-                cat /proc/cpuinfo
-                grep -E 'svm|vmx' /proc/cpuinfo
-                egrep -c '(vmx|svm)' /proc/cpuinfo
-                sed -i 's/&//g' start-vm.sh
-                sed -i 's/qemu-system-arm/qemu-system-aarch64 -enable-kvm/' start-vm.sh
-                sed -i 's/-m 1024/-m 6144/' start-vm.sh
-                #sed -i 's/cpus=4,sockets=1,cores=4/cpus=2/g' start-vm.sh
-                sed -i 's/-cpu cortex-a15/-cpu host,aarch64=off/g' start-vm.sh
-                cat start-vm.sh
-                sh start-vm.sh
-                echo "Process blocking since running in the background..."
-            fi
-          background: true
-      - run:
-          name: Wait for VM if armv7l
-          command: |
-            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
-                echo "Wait for VM to boot..."
-                pgrep qemu
-                cd ~/debian-11.3-armhf-ci
-                sed -i 's/sh start-vm.sh//g' start-vm-and-tunnels.sh && mv start-vm-and-tunnels.sh wait-for-vm-boot.sh
-                bash wait-for-vm-boot.sh 
-                ls /tmp/docker-on-debianhf.sock
-                cd ..
-            fi
+      # - run:
+      #     name: Download VM and install qemu if armv7l
+      #     command: |
+            # if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+            #     echo "Download armv7l VM..."
+            #     cd ~
+            #     curl -L https://github.com/jamesmortensen/virtual-machine-releases/releases/download/debian-11.3-armhf-ci-v1.0/debian-11.3-armhf-ci-v1.0.tar.xz \
+            #       -o debian-11.3-armhf-ci-v1.0.tar.xz
+            #     echo "Extract VM..."
+            #     tar xvfJ debian-11.3-armhf-ci-v1.0.tar.xz
+            #     rm debian-11.3-armhf-ci-v1.0.tar.xz
+            #     echo "Install QEMU binaries"
+            #     curl -L  https://github.com/xpack-dev-tools/qemu-arm-xpack/releases/download/v6.2.0-2/xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz -o xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
+            #       && tar xvfz xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
+            #       && echo "export PATH=$PWD/xpack-qemu-arm-6.2.0-2/bin:$PATH" > ~/.bashrc \
+            #       && source ~/.bashrc \
+            #       && qemu-system-arm --version
+            # fi
+      # - run:
+      #     name: Start VM if armv7l
+      #     command: |
+      #       if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+      #           echo "Start the armv7l VM with qemu-system-arm..."
+      #           cd ~/debian-11.3-armhf-ci
+      #           sed -i 's/&//g' start-vm.sh
+      #           sed -i 's/qemu-system-arm/qemu-system-aarch64/' start-vm.sh
+      #           sed -i 's/-m 1024/-m 6144/' start-vm.sh
+      #           #sed -i 's/cpus=4,sockets=1,cores=4/cpus=2/g' start-vm.sh
+      #           #sed -i 's/-cpu cortex-a15/-cpu host,aarch64=off/g' start-vm.sh
+      #           cat start-vm.sh
+      #           sh start-vm.sh
+      #           echo "Process blocking since running in the background..."
+      #       fi
+      #     background: true
+      # - run:
+      #     name: Wait for VM if armv7l
+      #     command: |
+      #       if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+      #           echo "Wait for VM to boot..."
+      #           pgrep qemu
+      #           cd ~/debian-11.3-armhf-ci
+      #           sed -i 's/sh start-vm.sh//g' start-vm-and-tunnels.sh && mv start-vm-and-tunnels.sh wait-for-vm-boot.sh
+      #           bash wait-for-vm-boot.sh 
+      #           ls /tmp/docker-on-debianhf.sock
+      #           cd ..
+      #       fi
       - run: docker info
       - checkout
       - run:
           name: "Build Docker images"
           command: |
             export BRANCH=$CIRCLE_BRANCH
-            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
-                export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
-                ls /tmp/docker-on-debianhf.sock
-            fi
+            # if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+            #     export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
+            #     ls /tmp/docker-on-debianhf.sock
+            # fi
             echo "Branch is $BRANCH"
             echo "DOCKER_HOST is $DOCKER_HOST"
             docker info
@@ -164,6 +160,7 @@ jobs:
           command: |
             if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
                 cd ~/debian-11.3-armhf-ci
+                sed -i 's/&//g' start-vm.sh
                 sh start-vm.sh
             fi
           background: true
@@ -183,6 +180,9 @@ jobs:
       - run:
           name: "Load built images from cache into Docker"
           command: |
+            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+                export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
+            fi
             echo "CIRCLE_WORKFLOW_ID = " $CIRCLE_WORKFLOW_ID
             docker load -i multi-arch-images.tar
       - run:
@@ -196,6 +196,11 @@ jobs:
           name: "Test Docker images"
           no_output_timeout: 2m
           command: |
+            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+                export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
+                export GRID_STATUS_MAX_ATTEMPTS=15
+                export PLATFORM=linux/arm/v7
+            fi
             export USE_RANDOM_USER=false
             export BRANCH=$CIRCLE_BRANCH
             USE_RANDOM_USER_ID=${USE_RANDOM_USER} NAMESPACE=${NAMESPACE} VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} SKIP_BUILD=true make test_multi_arch
