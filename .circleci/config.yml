@@ -25,6 +25,18 @@ jobs:
       PLATFORMS: << parameters.platforms >>
     steps:
       - run:
+          name: "Prepare workflow environment variables"
+          command: |
+            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+                echo 'export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock' >> $BASH_ENV
+            fi
+            echo 'export BRANCH="$CIRCLE_BRANCH"' >> $BASH_ENV
+            cat $BASH_ENV
+            source $BASH_ENV
+            echo "Workflow environment variables:"
+            echo $BRANCH
+      - run: uname -a
+      - run:
           name: Download VM and install qemu if armv7l
           command: |
             if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
@@ -54,23 +66,12 @@ jobs:
           name: Wait for VM if armv7l
           command: |
             if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
+                pgrep qemu
                 cd ~/debian-11.3-armhf-ci
                 sed -i 's/sh start-vm.sh//g' start-vm-and-tunnels.sh && mv start-vm-and-tunnels.sh wait-for-vm-boot.sh
                 bash wait-for-vm-boot.sh 
                 cd ..
             fi
-      - run:
-          name: "Prepare workflow environment variables"
-          command: |
-            if [ "$CIRCLE_JOB" = "build-multi-arch-armv7l" ]; then
-                echo 'export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock' >> $BASH_ENV
-            fi
-            echo 'export BRANCH="$CIRCLE_BRANCH"' >> $BASH_ENV
-            cat $BASH_ENV
-            source $BASH_ENV
-            echo "Workflow environment variables:"
-            echo $BRANCH
-      - run: uname -a
       - run: docker info
       - checkout
       - run:
