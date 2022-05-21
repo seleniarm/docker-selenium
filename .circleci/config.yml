@@ -136,7 +136,7 @@ jobs:
       - checkout
       - restore_cache:
           keys: 
-            - multi-arch-images-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-<< parameters.platforms >>
+            - multi-arch-images-{{ .Branch }}-d9897deb-4482-4d3a-b3cf-b9b36b69df31-<< parameters.platforms >>
       - run:
           name: Download VM and install qemu, if armv7l
           command: |
@@ -201,6 +201,7 @@ jobs:
                 export GRID_STATUS_MAX_ATTEMPTS=15
                 export PLATFORM=linux/arm/v7
             fi
+            docker run --rm seleniarm/standalone-firefox:armv7-tests-today arch
             export USE_RANDOM_USER=false
             export BRANCH=$CIRCLE_BRANCH
             USE_RANDOM_USER_ID=${USE_RANDOM_USER} NAMESPACE=${NAMESPACE} VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} SKIP_BUILD=true make test_multi_arch
@@ -283,31 +284,31 @@ jobs:
 workflows:
   build-and-test-multi-arch:
     jobs:
-      - build-multi-arch:
-          name: build-multi-arch-arm64
-          platforms: linux/arm64
-          machine-type: ubuntu2004arm64
-      - build-multi-arch:
-          name: build-multi-arch-amd64
-          platforms: linux/amd64
-          machine-type: ubuntu2004amd64
-      - build-multi-arch:
-          name: build-multi-arch-armv7l
-          platforms: linux/arm/v7
-          machine-type: ubuntu2004arm64
-      - test-multi-arch:
-          name: test-multi-arch-arm64
-          requires: [build-multi-arch-arm64]
-          platforms: linux/arm64
-          machine-type: ubuntu2004arm64
-      - test-multi-arch:
-          name: test-multi-arch-amd64
-          requires: [build-multi-arch-amd64]
-          platforms: linux/amd64
-          machine-type: ubuntu2004amd64
+      # - build-multi-arch:
+      #     name: build-multi-arch-arm64
+      #     platforms: linux/arm64
+      #     machine-type: ubuntu2004arm64
+      # - build-multi-arch:
+      #     name: build-multi-arch-amd64
+      #     platforms: linux/amd64
+      #     machine-type: ubuntu2004amd64
+      # - build-multi-arch:
+      #     name: build-multi-arch-armv7l
+      #     platforms: linux/arm/v7
+      #     machine-type: ubuntu2004arm64
+      # - test-multi-arch:
+      #     name: test-multi-arch-arm64
+      #     requires: [build-multi-arch-arm64]
+      #     platforms: linux/arm64
+      #     machine-type: ubuntu2004arm64
+      # - test-multi-arch:
+      #     name: test-multi-arch-amd64
+      #     requires: [build-multi-arch-amd64]
+      #     platforms: linux/amd64
+      #     machine-type: ubuntu2004amd64
       - test-multi-arch:
           name: test-multi-arch-armv7l
-          requires: [build-multi-arch-armv7l]
+          # requires: [build-multi-arch-armv7l]
           platforms: linux/arm/v7
           machine-type: ubuntu2004arm64
   
