@@ -65,7 +65,7 @@ jobs:
                 sed -i 's/&//g' start-vm.sh
                 sed -i 's/qemu-system-arm/qemu-system-aarch64 -enable-kvm/' start-vm.sh
                 sed -i 's/-m 1024/-m 6144/' start-vm.sh
-                sed -i 's/cpus=4,sockets=1,cores=4/cpus=2,sockets=1,cores=4/g' start-vm.sh
+                #sed -i 's/cpus=4,sockets=1,cores=4/cpus=2,sockets=1,cores=4/g' start-vm.sh
                 sed -i 's/-cpu cortex-a15/-cpu host/g' start-vm.sh
                 sh start-vm.sh
                 echo "Process blocking since running in the background..."
