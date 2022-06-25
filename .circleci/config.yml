@@ -97,7 +97,7 @@ jobs:
                 tar xvfJ debian-11.3-armhf-ci-v1.0.tar.xz
                 rm debian-11.3-armhf-ci-v1.0.tar.xz
                 echo "Install QEMU binaries"
-                curl -L  https://github.com/xpack-dev-tools/qemu-arm-xpack/releases/download/v7.0.0-1/xpack-qemu-arm-7.0.0-1-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz -o xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
+                curl -L  https://github.com/xpack-dev-tools/qemu-arm-xpack/releases/download/v7.0.0-1/xpack-qemu-arm-7.0.0-1-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz -o xpack-qemu-arm-7.0.0-1-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
                   && tar xvfz xpack-qemu-arm-7.0.0-1-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
                   && echo "export PATH=$PWD/xpack-qemu-arm-7.0.0-1/bin:$PATH" > ~/.bashrc \
                   && source ~/.bashrc \
