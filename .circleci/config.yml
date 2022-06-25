@@ -102,6 +102,7 @@ jobs:
                   && echo "export PATH=$PWD/xpack-qemu-arm-7.0.0-1/bin:$PATH" > ~/.bashrc \
                   && source ~/.bashrc \
                   && qemu-system-arm --version
+                  && qemu-system-aarch64 --version
             fi
       - run:
           name: Start VM if armv7l
@@ -112,6 +113,7 @@ jobs:
                 sed -i 's/-m 1024/-m 6144/' start-vm.sh
                 sed -i 's/,highmem=off//' start-vm.sh
                 sed -i 's/cpu cortex-a15/cpu host/' start-vm.sh
+                sed -i 's/qemu-system-arm/qemu-system-aarch64/' start-vm.sh
                 sed -i 's/cpus=4,sockets=1,cores=4,threads=1/cpus=2,sockets=1,cores=2,threads=1/' start-vm.sh
                 cat start-vm.sh
                 sh start-vm.sh
