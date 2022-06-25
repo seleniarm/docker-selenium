@@ -101,7 +101,7 @@ jobs:
                   && tar xvfz xpack-qemu-arm-7.0.0-1-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
                   && echo "export PATH=$PWD/xpack-qemu-arm-7.0.0-1/bin:$PATH" > ~/.bashrc \
                   && source ~/.bashrc \
-                  && qemu-system-arm --version
+                  && qemu-system-arm --version \
                   && qemu-system-aarch64 --version
             fi
       - run:
