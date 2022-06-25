@@ -110,6 +110,7 @@ jobs:
                 cd ~/debian-11.3-armhf-ci
                 sed -i 's/&//g' start-vm.sh
                 sed -i 's/-m 1024/-m 6144/' start-vm.sh
+                sed -i 's/,highmem=off//' start-vm.sh
                 sh start-vm.sh
             fi
           background: true
