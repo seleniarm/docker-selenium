@@ -10,6 +10,11 @@ executors:
     machine:
       image: ubuntu-2004:current
     resource_class: medium
+  ubuntu2004arm64-large:
+    machine:
+      image: ubuntu-2004:current
+    resource_class: arm-large
+  ubuntu2004amd64:
 
 jobs:
   build-multi-arch:
@@ -77,10 +82,10 @@ jobs:
       BUILD_DATE: today
     steps:
       - checkout
-      - restore_cache:
-          keys: 
+      #- restore_cache:
+      #    keys: 
             # - multi-arch-images-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-<< parameters.platforms >>
-            - multi-arch-images-{{ .Branch }}-d9897deb-4482-4d3a-b3cf-b9b36b69df31-<< parameters.platforms >>
+      #      - multi-arch-images-{{ .Branch }}-d9897deb-4482-4d3a-b3cf-b9b36b69df31-<< parameters.platforms >>
       - run:
           name: Download VM and install qemu, if armv7l
           command: |
@@ -93,9 +98,9 @@ jobs:
                 tar xvfJ debian-11.3-armhf-ci-v1.0.tar.xz
                 rm debian-11.3-armhf-ci-v1.0.tar.xz
                 echo "Install QEMU binaries"
-                curl -L  https://github.com/xpack-dev-tools/qemu-arm-xpack/releases/download/v6.2.0-2/xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz -o xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
-                  && tar xvfz xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
-                  && echo "export PATH=$PWD/xpack-qemu-arm-6.2.0-2/bin:$PATH" > ~/.bashrc \
+                curl -L  https://github.com/xpack-dev-tools/qemu-arm-xpack/releases/download/v7.0.0-1/xpack-qemu-arm-7.0.0-1-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz -o xpack-qemu-arm-6.2.0-2-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
+                  && tar xvfz xpack-qemu-arm-7.0.0-1-linux-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/').tar.gz \
+                  && echo "export PATH=$PWD/xpack-qemu-arm-7.0.0-1/bin:$PATH" > ~/.bashrc \
                   && source ~/.bashrc \
                   && qemu-system-arm --version
             fi
@@ -124,13 +129,19 @@ jobs:
       - run: uname -a
       - run: docker info
       - run:
-          name: "Load built images from cache into Docker"
+          name: "Load built images into Docker"
           command: |
             if [ "$CIRCLE_JOB" = "test-multi-arch-armv7l" ]; then
                 export DOCKER_HOST=unix:///tmp/docker-on-debianhf.sock
             fi
             echo "CIRCLE_WORKFLOW_ID = " $CIRCLE_WORKFLOW_ID
-            docker load -i multi-arch-images.tar
+            # docker load -i multi-arch-images.tar
+            docker pull seleniarm/hub:latest
+            docker pull seleniarm/node-chromium:latest
+            docker pull seleniarm/node-firefox:latest
+            docker pull seleniarm/standalone-chromium:latest
+            docker pull seleniarm/standalone-firefox:latest
+            docker info
       - run:
           name: "Use Python3 and pip3 instead of Python2.7"
           command: |
@@ -262,7 +273,7 @@ workflows:
           name: test-multi-arch-armv7l
           # requires: [build-multi-arch-armv7l]
           platforms: linux/arm/v7
-          machine-type: ubuntu2004arm64
+          machine-type: ubuntu2004arm64-large
   
   deploy-multi-arch:
     jobs:
