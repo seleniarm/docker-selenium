@@ -46,7 +46,7 @@ fi
 echo "session-timeout = \"${SE_NODE_SESSION_TIMEOUT}\"" >> "$FILENAME"
 echo "override-max-sessions = ${SE_NODE_OVERRIDE_MAX_SESSIONS}" >> "$FILENAME"
 echo "detect-drivers = false" >> "$FILENAME"
-echo "drain-after-session-count = ${DRAIN_AFTER_SESSION_COUNT}" >> "$FILENAME"
+echo "drain-after-session-count = ${DRAIN_AFTER_SESSION_COUNT:-$SE_DRAIN_AFTER_SESSION_COUNT}" >> "$FILENAME"
 echo "max-sessions = ${SE_NODE_MAX_SESSIONS}
 " >> "$FILENAME"
 
@@ -62,7 +62,12 @@ elif [[ "${SE_NODE_BROWSER_NAME}" == "MicrosoftEdge" ]]; then
     SE_NODE_BROWSER_VERSION=$(short_version $(microsoft-edge --version | awk '{print $3}'))
 fi
 
+if [[ -z "$SE_NODE_STEREOTYPE" ]]; then
 SE_NODE_STEREOTYPE="{\"browserName\": \"${SE_NODE_BROWSER_NAME}\", \"browserVersion\": \"${SE_NODE_BROWSER_VERSION}\", \"platformName\": \"Linux\"}"
+else
+SE_NODE_STEREOTYPE="$SE_NODE_STEREOTYPE"
+fi
+
 echo "[[node.driver-configuration]]" >> "$FILENAME"
 echo "display-name = \"${SE_NODE_BROWSER_NAME}\"" >> "$FILENAME"
 echo "stereotype = '${SE_NODE_STEREOTYPE}'" >> "$FILENAME"
