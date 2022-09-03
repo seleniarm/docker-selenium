@@ -142,11 +142,11 @@ jobs:
             fi
             echo "CIRCLE_WORKFLOW_ID = " $CIRCLE_WORKFLOW_ID
             # docker load -i multi-arch-images.tar
-            docker pull seleniarm/hub:4.3.0-20220624
-            docker pull seleniarm/node-chromium:4.3.0-20220624
-            docker pull seleniarm/node-firefox:4.3.0-20220624
-            docker pull seleniarm/standalone-chromium:4.3.0-20220624
-            docker pull seleniarm/standalone-firefox:4.3.0-20220624
+            docker pull seleniarm/hub:4.4.0-20220814
+            docker pull seleniarm/node-chromium:4.4.0-20220814
+            docker pull seleniarm/node-firefox:4.4.0-20220814
+            docker pull seleniarm/standalone-chromium:4.4.0-20220814
+            docker pull seleniarm/standalone-firefox:4.4.0-20220814
             docker info
       - run:
           name: "Use Python3 and pip3 instead of Python2.7"
@@ -172,7 +172,7 @@ jobs:
             # docker run --rm --privileged aptman/qus -- -r
             # docker run --rm --privileged aptman/qus -s -- -p
             #docker run --platform linux/arm/v7 --rm seleniarm/standalone-firefox:armv7-tests-today arch
-            docker run --platform linux/arm/v7 --rm seleniarm/standalone-firefox:4.3.0-20220624 arch
+            docker run --platform linux/arm/v7 --rm seleniarm/standalone-firefox:4.4.0-20220814 arch
             if [ "$CIRCLE_JOB" = "test-multi-arch-armv7l" ]; then
                 sh stop-vm.sh
             fi
