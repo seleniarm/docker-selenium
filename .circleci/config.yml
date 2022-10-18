@@ -31,7 +31,7 @@ jobs:
       - run:
           name: "Prepare workflow environment variables"
           command: |
-            echo 'export BRANCH="$CIRCLE_BRANCH"' >> $BASH_ENV
+            echo 'export BRANCH="${CIRCLE_BRANCH//\//-}"' >> $BASH_ENV
             cat $BASH_ENV
             source $BASH_ENV
             echo "Workflow environment variables:"
@@ -48,7 +48,7 @@ jobs:
       - run:
           name: "Save Docker Images in Cache"
           command: |  
-            export VERSION=$CIRCLE_BRANCH
+            export VERSION=${CIRCLE_BRANCH//\//-}
             echo $NAMESPACE/base:$VERSION-$BUILD_DATE 
             echo $NAMESPACE/node-base:$VERSION-$BUILD_DATE 
             echo $NAMESPACE/hub:$VERSION-$BUILD_DATE 
@@ -165,7 +165,7 @@ jobs:
                 export PLATFORM=linux/arm/v7
             fi
             export USE_RANDOM_USER=false
-            #export BRANCH=$CIRCLE_BRANCH
+            #export BRANCH=${CIRCLE_BRANCH//\//-}
             export BRANCH=4.3.0
             export BUILD_DATE=20220624
             USE_RANDOM_USER_ID=${USE_RANDOM_USER} NAMESPACE=${NAMESPACE} VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} SKIP_BUILD=true make test_multi_arch
