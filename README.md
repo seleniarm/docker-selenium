@@ -77,6 +77,46 @@ To build for armv7l/armhf, replace PLATFORMS environment variable with `linux/ar
 $ NAME=local-seleniarm VERSION=4.5.0 BUILD_DATE=$(date '+%Y%m%d') PLATFORMS=linux/arm/v7 BUILD_ARGS=--load make standalone_chromium_multi
 ```
 
+Docker compose for hub and node using seleniarm docker container images,
+
+**docker-compose-v3-latest-channel.yml:**
+
+```bash
+# To execute this docker-compose yml file use `docker-compose -f docker-compose-v3-beta-channel.yml up`
+# Add the `-d` flag at the end for detached execution
+# To stop the execution, hit Ctrl+C, and then `docker-compose -f docker-compose-v3-beta-channel.yml down`
+version: "3"
+services:
+  chrome:
+    image: seleniarm/node-chromium:latest
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
+  firefox:
+    image: seleniarm/node-firefox:latest
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
+  selenium-hub:
+    image: seleniarm/hub:latest
+    container_name: selenium-hub
+    ports:
+      - "4442:4442"
+      - "4443:4443"
+      - "4444:4444"
+
+```
+
 ----
 # -- The official documentation from seleniumHQ begins here --
 ----
