@@ -393,7 +393,8 @@ test_firefox_standalone:
 
 
 # Test multi-arch container images
-test_multi_arch: test_chromium_multi \
+test_multi_arch: qemu_user_static \
+ test_chromium_multi \
  test_firefox_multi \
  test_chromium_standalone_multi \
  test_firefox_standalone_multi
