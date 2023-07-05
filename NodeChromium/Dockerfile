@@ -6,10 +6,16 @@ LABEL authors=${AUTHORS}
 
 USER root
 
+# Add Debian Sid sources and signing keys to install Chromium without snap
+RUN wget -O debian-archive-keyring.deb \
+  https://deb.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2023.3_all.deb \
+  && dpkg -i debian-archive-keyring.deb \
+  && apt-key update \
+  && echo "deb http://deb.debian.org/debian/ unstable main contrib non-free" > /etc/apt/sources.list.d/debian.list \
+  && echo "deb-src http://deb.debian.org/debian/ unstable main contrib non-free" >> /etc/apt/sources.list.d/debian.list
+
 # Install Chromium 
-# RUN echo "deb http://http.us.debian.org/debian/ stable non-free contrib main" >> /etc/apt/sources.list \
-RUN echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list \
-  && apt-get update -qqy \
+RUN apt-get update -qqy \
   # && apt-get -qqy install chromium=89.0.4389.82-1 \
   # && apt-get -qqy install chromium=90.0.4430.212-1 \
   # && apt-get -qqy install chromium=93.0.4577.82-1 \

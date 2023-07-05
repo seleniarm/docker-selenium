@@ -5,15 +5,16 @@
 #FROM ubuntu:focal-20220415
 #FROM ubuntu:focal-20220531
 #FROM ubuntu:focal-20230301
-FROM debian:latest
+FROM ubuntu:focal-20230605
+#FROM debian:latest
 LABEL authors="Selenium <selenium-developers@googlegroups.com>"
 
 #================================================
 # Customize sources for apt-get
 #================================================
-#RUN  echo "deb http://archive.ubuntu.com/ubuntu focal main universe\n" > /etc/apt/sources.list \
-#  && echo "deb http://archive.ubuntu.com/ubuntu focal-updates main universe\n" >> /etc/apt/sources.list \
-#  && echo "deb http://security.ubuntu.com/ubuntu focal-security main universe\n" >> /etc/apt/sources.list
+# RUN  echo "deb http://archive.ubuntu.com/ubuntu focal main universe\n" > /etc/apt/sources.list \
+#   && echo "deb http://archive.ubuntu.com/ubuntu focal-updates main universe\n" >> /etc/apt/sources.list \
+#   && echo "deb http://security.ubuntu.com/ubuntu focal-security main universe\n" >> /etc/apt/sources.list
 
 ARG TARGETARCH
 ARG TARGETVARIANT
