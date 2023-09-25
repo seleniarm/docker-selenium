@@ -2,6 +2,42 @@
 
 All notable changes to this helm chart will be documented in this file.
 
+## :heavy_check_mark: 0.21.2
+
+### Changed
+- Update image tag to 4.12.1-20230920
+
+## :heavy_check_mark: 0.21.1
+
+### Changed
+- Update image tag to 4.12.1-20230912
+
+## :heavy_check_mark: 0.21.0
+
+### Added
+- feat: Add option to inject sidecars into Node Pods (#1938) 
+- Add minReplicaCount, remove replicas if autoscaling is enabled (#1932) 
+
+## :heavy_check_mark: 0.20.1
+
+### Changed
+- Update image tag to 4.12.1-20230904
+
+## :heavy_check_mark: 0.20.0
+
+### Added
+- fix missing securityContext in nodes (#1907) :: balazs92117
+- Support to nodes livenessProbe into the Helm Chart (#1897) :: Bruno Brito
+- helm chart VolumeMounts & Volumes for Selenium hub (#1893) :: Yoga Yu
+
+### Changed
+- Update image tag to 4.11.0-20230801
+
+## :heavy_check_mark: 0.19.0
+
+### Added
+-  Autoscaling selenium grid on kubernetes with scaledjobs (#1854) 
+
 ## :heavy_check_mark: 0.18.1
 
 ### Changed

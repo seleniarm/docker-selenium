@@ -1,14 +1,29 @@
 global:
   seleniumGrid:
     # Image tag for all selenium components
-    imageTag: 4.10.0-20230607
+    imageTag: 4.12.1-20230920
     # Image tag for browser's nodes
-    nodesImageTag: 4.10.0-20230607
+    nodesImageTag: 4.12.1-20230920
     # Pull secret for all components, can be overridden individually
-    imagePullSecret: ""
+    imagePullSecret: ""    
+
+# Basic auth settings for Selenium Grid
+basicAuth:
+      # Enable or disable basic auth
+      enabled: true
+      # Username for basic auth
+      username: admin
+      # Password for basic auth
+      password: admin    
 
 # Deploy Router, Distributor, EventBus, SessionMap and Nodes separately
 isolateComponents: false
+
+# Service Account for all components
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
 
 # Configure the ingress resource to access the Grid installation.
 ingress:
@@ -32,6 +47,12 @@ busConfigMap:
   # Custom annotations for configmap
   annotations: {}
 
+# ConfigMap that contains common environment variables for browser nodes
+nodeConfigMap:
+  name: selenium-node-config
+  # Custom annotations for configmap
+  annotations: {}
+
 # Configuration for isolated components (applied only if `isolateComponents: true`)
 components:
 
@@ -40,7 +61,7 @@ components:
     # Router image name
     imageName: selenium/router
     # Router image tag (this overwrites global.seleniumGrid.imageTag parameter)
-    # imageTag: 4.10.0-20230607
+    # imageTag: 4.12.1-20230920
 
     # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
     imagePullPolicy: IfNotPresent
@@ -91,7 +112,7 @@ components:
     # Distributor image name
     imageName: selenium/distributor
     # Distributor image tag (this overwrites global.seleniumGrid.imageTag parameter)
-    # imageTag: 4.10.0-20230607
+    # imageTag: 4.12.1-20230920
 
     # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
     imagePullPolicy: IfNotPresent
@@ -122,7 +143,7 @@ components:
     # Event Bus image name
     imageName: selenium/event-bus
     # Event Bus image tag (this overwrites global.seleniumGrid.imageTag parameter)
-    # imageTag: 4.10.0-20230607
+    # imageTag: 4.12.1-20230920
 
     # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
     imagePullPolicy: IfNotPresent
@@ -157,7 +178,7 @@ components:
     # Session Map image name
     imageName: selenium/sessions
     # Session Map image tag (this overwrites global.seleniumGrid.imageTag parameter)
-    # imageTag: 4.10.0-20230607
+    # imageTag: 4.12.1-20230920
 
     # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
     imagePullPolicy: IfNotPresent
@@ -187,7 +208,7 @@ components:
     # Session Queue image name
     imageName: selenium/session-queue
     # Session Queue image tag (this overwrites global.seleniumGrid.imageTag parameter)
-    # imageTag: 4.10.0-20230607
+    # imageTag: 4.12.1-20230920
 
     # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
     imagePullPolicy: IfNotPresent
@@ -237,7 +258,7 @@ hub:
   # Selenium Hub image name
   imageName: selenium/hub
   # Selenium Hub image tag (this overwrites global.seleniumGrid.imageTag parameter)
-  # imageTag: 4.10.0-20230607
+  # imageTag: 4.12.1-20230920
   # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
   imagePullPolicy: IfNotPresent
   # Image pull secret (see https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
@@ -288,6 +309,16 @@ hub:
     #   name: proxy-settings
     # - secretRef:
     #   name: mysecret
+  extraVolumeMounts: []
+  # - name: my-extra-volume
+  #   mountPath: /home/seluser/Downloads
+
+  extraVolumes: []
+  # - name: my-extra-volume
+  #   emptyDir: {}
+  # - name: my-extra-volume-from-pvc
+  #   persistentVolumeClaim:
+  #     claimName: my-pv-claim
   # Resources for selenium-hub container
   resources: {}
   # SecurityContext for selenium-hub container
@@ -305,11 +336,38 @@ hub:
   # Priority class name for selenium-hub pods
   priorityClassName: ""
 
+# Keda scaled object configuration
+autoscaling:
+  # Enable autoscaling. Implies installing KEDA
+  enabled: false
+  # Enable autoscaling without automatically installing KEDA
+  enableWithExistingKEDA: false
+  # Which typ of KEDA scaling to use: job or deployment
+  scalingType: job
+  # Annotations for KEDA resources: ScaledObject and ScaledJob
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+  # Options for KEDA ScaledJobs
+  scaledJobOptions:
+    pollingInterval: 10
+    scalingStrategy:
+      strategy: accurate
+  deregisterLifecycle:
+    preStop:
+      exec:
+        command:
+          - bash
+          - -c
+          - |
+            curl -X POST 127.0.0.1:5555/se/grid/node/drain --header 'X-REGISTRATION-SECRET;' && \
+            while curl 127.0.0.1:5555/status; do sleep 1; done;
+
 # Configuration for chrome nodes
 chromeNode:
   # Enable chrome nodes
   enabled: true
 
+  # NOTE: Only used when autoscaling.enabled is false
   # Enable creation of Deployment
   # true (default) - if you want long living pods
   # false - for provisioning your own custom type such as Jobs
@@ -320,7 +378,7 @@ chromeNode:
   # Image of chrome nodes
   imageName: selenium/node-chrome
   # Image of chrome nodes (this overwrites global.seleniumGrid.nodesImageTag)
-  # imageTag: 4.10.0-20230607
+  # imageTag: 4.12.1-20230920
   # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
   imagePullPolicy: IfNotPresent
   # Image pull secret (see https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
@@ -395,19 +453,13 @@ chromeNode:
     #   port: 5555
     # failureThreshold: 120
     # periodSeconds: 5
+
+  # Liveness probe settings
+  livenessProbe: {}
+
   # Time to wait for pod termination
   terminationGracePeriodSeconds: 30
-  # Allow pod correctly shutdown
   lifecycle: {}
-    # preStop:
-    #   exec:
-    #     command:
-    #       - bash
-    #       - -c
-    #       - |
-    #         curl -X POST 127.0.0.1:5555/se/grid/node/drain --header 'X-REGISTRATION-SECRET;' && \
-    #         while curl 127.0.0.1:5555/status; do sleep 1; done
-
   extraVolumeMounts: []
   # - name: my-extra-volume
   #   mountPath: /home/seluser/Downloads
@@ -419,11 +471,26 @@ chromeNode:
   #   persistentVolumeClaim:
   #     claimName: my-pv-claim
 
+  maxReplicaCount: 8
+  minReplicaCount: 1
+  hpa:
+    url: '{{ include "seleniumGrid.graphqlURL" . }}'
+    browserName: chrome
+    # browserVersion: '91.0' # Optional. Only required when supporting multiple versions of browser in your Selenium Grid.
+    unsafeSsl : 'true' # Optional
+
+  # It is used to add a sidecars proxy in the same pod of the browser node.
+  # It means it will add a new container to the deployment itself.
+  # It should be set using the --set-json option
+  sidecars: []
+
+
 # Configuration for firefox nodes
 firefoxNode:
   # Enable firefox nodes
   enabled: true
 
+  # NOTE: Only used when autoscaling.enabled is false
   # Enable creation of Deployment
   # true (default) - if you want long living pods
   # false - for provisioning your own custom type such as Jobs
@@ -434,7 +501,7 @@ firefoxNode:
   # Image of firefox nodes
   imageName: selenium/node-firefox
   # Image of firefox nodes (this overwrites global.seleniumGrid.nodesImageTag)
-  # imageTag: 4.10.0-20230607
+  # imageTag: 4.12.1-20230920
   # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
   imagePullPolicy: IfNotPresent
   # Image pull secret (see https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
@@ -509,19 +576,13 @@ firefoxNode:
     #   port: 5555
     # failureThreshold: 120
     # periodSeconds: 5
+
+  # Liveness probe settings
+  livenessProbe: {}
+
   # Time to wait for pod termination
   terminationGracePeriodSeconds: 30
-  # Allow pod correctly shutdown
   lifecycle: {}
-    # preStop:
-    #   exec:
-    #     command:
-    #       - bash
-    #       - -c
-    #       - |
-    #         curl -X POST 127.0.0.1:5555/se/grid/node/drain --header 'X-REGISTRATION-SECRET;' && \
-    #         while curl 127.0.0.1:5555/status; do sleep 1; done
-
   extraVolumeMounts: []
   # - name: my-extra-volume
   #   mountPath: /home/seluser/Downloads
@@ -532,12 +593,23 @@ firefoxNode:
   # - name: my-extra-volume-from-pvc
   #   persistentVolumeClaim:
   #     claimName: my-pv-claim
+  maxReplicaCount: 8
+  minReplicaCount: 1
+  hpa:
+    url: '{{ include "seleniumGrid.graphqlURL" . }}'
+    browserName: firefox
+
+  # It is used to add a sidecars proxy in the same pod of the browser node.
+  # It means it will add a new container to the deployment itself.
+  # It should be set using the --set-json option
+  sidecars: []
 
 # Configuration for edge nodes
 edgeNode:
   # Enable edge nodes
   enabled: true
 
+  # NOTE: Only used when autoscaling.enabled is false
   # Enable creation of Deployment
   # true (default) - if you want long living pods
   # false - for provisioning your own custom type such as Jobs
@@ -548,7 +620,7 @@ edgeNode:
   # Image of edge nodes
   imageName: selenium/node-edge
   # Image of edge nodes (this overwrites global.seleniumGrid.nodesImageTag)
-  # imageTag: 4.10.0-20230607
+  # imageTag: 4.12.1-20230920
   # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
   imagePullPolicy: IfNotPresent
   # Image pull secret (see https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
@@ -623,19 +695,13 @@ edgeNode:
     #   port: 5555
     # failureThreshold: 120
     # periodSeconds: 5
+
+  # Liveness probe settings
+  livenessProbe: {}
+
   # Time to wait for pod termination
   terminationGracePeriodSeconds: 30
-  # Allow pod correctly shutdown
   lifecycle: {}
-    # preStop:
-    #   exec:
-    #     command:
-    #       - bash
-    #       - -c
-    #       - |
-    #         curl -X POST 127.0.0.1:5555/se/grid/node/drain --header 'X-REGISTRATION-SECRET;' && \
-    #         while curl 127.0.0.1:5555/status; do sleep 1; done
-
   extraVolumeMounts: []
   # - name: my-extra-volume
   #   mountPath: /home/seluser/Downloads
@@ -646,6 +712,17 @@ edgeNode:
   # - name: my-extra-volume-from-pvc
   #   persistentVolumeClaim:
   #     claimName: my-pv-claim
+  maxReplicaCount: 8
+  minReplicaCount: 1
+  hpa:
+    url: '{{ include "seleniumGrid.graphqlURL" . }}'
+    browserName: MicrosoftEdge
+    sessionBrowserName: 'msedge'
+
+  # It is used to add a sidecars proxy in the same pod of the browser node.
+  # It means it will add a new container to the deployment itself.
+  # It should be set using the --set-json option
+  sidecars: []
 
 # Custom labels for k8s resources
 customLabels: {}
