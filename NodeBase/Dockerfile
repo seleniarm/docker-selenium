@@ -139,9 +139,9 @@ RUN mkdir -p ${HOME}/.vnc \
   && x11vnc -storepasswd secret ${HOME}/.vnc/passwd
 
 # Added to avoid the following sudo error while running multi-arch builds:
-# "sudo: effective uid is not 0, is /usr/bin/sudo on a file system with 
+# "sudo: effective uid is not 0, is /usr/bin/sudo on a file system with
 #   the 'nosuid' option set or an NFS file system without root privileges?"
-USER root 
+USER root
 
 #==========
 # Relaxing permissions for OpenShift and other non-sudo environments
@@ -179,7 +179,7 @@ ENV DISPLAY_NUM 99
 # Path to the Configfile
 ENV CONFIG_FILE=/opt/selenium/config.toml
 ENV GENERATE_CONFIG true
-# Drain the Node after N sessions. 
+# Drain the Node after N sessions.
 # A value higher than zero enables the feature
 ENV SE_DRAIN_AFTER_SESSION_COUNT 0
 # Setting Selenium Manager to work offline
