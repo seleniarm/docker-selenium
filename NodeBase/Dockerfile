@@ -58,7 +58,7 @@ RUN apt-get update -qqy \
 #================
 # libfontconfig            ~1 MB
 # libfreetype6             ~1 MB
-# xfonts-cyrillic          ~2 MB
+# xfonts-cyrillic          ~2 MB (no longer supported on Debian bookworm)
 # xfonts-scalable          ~2 MB
 # fonts-liberation         ~3 MB
 # fonts-ipafont-gothic     ~13 MB
@@ -78,7 +78,6 @@ RUN apt-get -qqy update \
   && apt-get -qqy --no-install-recommends install \
     libfontconfig \
     libfreetype6 \
-    xfonts-cyrillic \
     xfonts-scalable \
     fonts-liberation \
     fonts-ipafont-gothic \
@@ -139,9 +138,9 @@ RUN mkdir -p ${HOME}/.vnc \
   && x11vnc -storepasswd secret ${HOME}/.vnc/passwd
 
 # Added to avoid the following sudo error while running multi-arch builds:
-# "sudo: effective uid is not 0, is /usr/bin/sudo on a file system with 
+# "sudo: effective uid is not 0, is /usr/bin/sudo on a file system with
 #   the 'nosuid' option set or an NFS file system without root privileges?"
-USER root 
+USER root
 
 #==========
 # Relaxing permissions for OpenShift and other non-sudo environments
@@ -179,7 +178,7 @@ ENV DISPLAY_NUM 99
 # Path to the Configfile
 ENV CONFIG_FILE=/opt/selenium/config.toml
 ENV GENERATE_CONFIG true
-# Drain the Node after N sessions. 
+# Drain the Node after N sessions.
 # A value higher than zero enables the feature
 ENV SE_DRAIN_AFTER_SESSION_COUNT 0
 # Setting Selenium Manager to work offline

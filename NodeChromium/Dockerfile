@@ -6,9 +6,9 @@ LABEL authors=${AUTHORS}
 
 USER root
 
-# Install Chromium 
+# Install Chromium
 # RUN echo "deb http://http.us.debian.org/debian/ stable non-free contrib main" >> /etc/apt/sources.list \
-RUN echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list \
+RUN echo "deb http://deb.debian.org/debian/ bookworm main" >> /etc/apt/sources.list \
   && apt-get update -qqy \
   # && apt-get -qqy install chromium=89.0.4389.82-1 \
   # && apt-get -qqy install chromium=90.0.4430.212-1 \
@@ -32,6 +32,8 @@ RUN apt-get update -qqy \
   && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 RUN echo "chromium" > /opt/selenium/browser_name
+RUN google-chrome --version | awk '{print $3}' > /opt/selenium/browser_version
+RUN echo "\"goog:chromeOptions\": {\"binary\": \"/usr/bin/chromium\"}" > /opt/selenium/browser_binary_location
 
 USER 1200
 

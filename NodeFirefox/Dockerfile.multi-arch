@@ -20,13 +20,13 @@ USER root
   # && apt-get -qqy install firefox libavcodec-extra \
   # && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
-# Pulling Firefox from Debian Snapshots so we can control which version we use as latest
-RUN echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list \
+COPY 99firefox-unstable /etc/apt/preferences.d/99firefox-unstable
+RUN echo "deb http://deb.debian.org/debian/ unstable main contrib non-free" >> /etc/apt/sources.list \
   && apt-get update -qqy \
   && apt-get install libavcodec-extra -y \
-  && wget https://snapshot.debian.org/archive/debian/20230924T210045Z/pool/main/f/firefox/firefox_117.0.1-1_`dpkg --print-architecture`.deb -O firefox.deb \
-  && apt install ./firefox.deb -y \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/* ./firefox.deb
+  && apt-get install -t unstable firefox -y \
+  && apt-get purge firefox-esr \
+  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 #=============
 # geckodriver
@@ -40,7 +40,7 @@ RUN if [ $TARGETARCH = "arm" ] && [ $TARGETVARIANT = "v7" ]; then \
        echo "*** BUILD ERROR: \$TARGETARCH must be arm64, amd64, or arm with \$TARGETVARIANT set to v7... exiting..." ; \
        exit 1 ; \
     fi ; \
-    if [ "$ARCH" = "arm64" ]; then \ 
+    if [ "$ARCH" = "arm64" ]; then \
        wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/mozilla/geckodriver/releases/download/v$GECKODRIVER_VERSION/geckodriver-v$GECKODRIVER_VERSION-linux-aarch64.tar.gz ; \
     elif [ "$ARCH" = "armhf" ]; then \
        wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/jamesmortensen/geckodriver-arm-binaries/releases/download/v$GECKODRIVER_VERSION/geckodriver-v$GECKODRIVER_VERSION-linux-armv7l.tar.gz ; \
@@ -55,9 +55,21 @@ RUN if [ $TARGETARCH = "arm" ] && [ $TARGETVARIANT = "v7" ]; then \
     ln -s /opt/geckodriver-bin/geckodriver /usr/local/bin/geckodriver ; \
     chmod 755 /usr/local/bin/geckodriver
 
+# Workaround for issue launch Firefox Webdriver "Failed to read marionette port"
+RUN mkdir -p /home/seluser/.cache /home/seluser/.mozilla /.cache \
+    && chmod 777 /home/seluser/.cache /home/seluser/.mozilla /.cache
+
 USER 1200
 
+RUN if ! whoami &> /dev/null; then \
+  if [ -w /tmp/passwd ]; then \
+    echo "${USER_NAME:-default}:x:$(id -u):0:${USER_NAME:-default} user:/home/seluser:/tmp:/bin/bash" >> /tmp/passwd; \
+  fi \
+fi
+
 #============================================
-# Dumping Browser name and version for config
+# Dumping Browser information for config
 #============================================
 RUN echo "firefox" > /opt/selenium/browser_name
+RUN firefox --version | awk '{print $3}' > /opt/selenium/browser_version
+RUN echo "\"moz:firefoxOptions\": {\"binary\": \"/usr/bin/firefox\"}" > /opt/selenium/browser_binary_location
