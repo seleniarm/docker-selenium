@@ -55,10 +55,20 @@ RUN if [ $TARGETARCH = "arm" ] && [ $TARGETVARIANT = "v7" ]; then \
     ln -s /opt/geckodriver-bin/geckodriver /usr/local/bin/geckodriver ; \
     chmod 755 /usr/local/bin/geckodriver
 
+# Workaround for issue launch Firefox Webdriver "Failed to read marionette port"
+RUN mkdir -p /home/seluser/.cache /home/seluser/.mozilla /.cache \
+    && chmod 777 /home/seluser/.cache /home/seluser/.mozilla /.cache
+
 USER 1200
 
+RUN if ! whoami &> /dev/null; then \
+  if [ -w /tmp/passwd ]; then \
+    echo "${USER_NAME:-default}:x:$(id -u):0:${USER_NAME:-default} user:/home/seluser:/tmp:/bin/bash" >> /tmp/passwd; \
+  fi \
+fi
+
 #============================================
-# Dumping Browser name and version for config
+# Dumping Browser information for config
 #============================================
 RUN echo "firefox" > /opt/selenium/browser_name
 RUN firefox --version | awk '{print $3}' > /opt/selenium/browser_version
