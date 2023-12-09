@@ -58,7 +58,7 @@ RUN apt-get update -qqy \
 #================
 # libfontconfig            ~1 MB
 # libfreetype6             ~1 MB
-# xfonts-cyrillic          ~2 MB
+# xfonts-cyrillic          ~2 MB (no longer supported on Debian bookworm)
 # xfonts-scalable          ~2 MB
 # fonts-liberation         ~3 MB
 # fonts-ipafont-gothic     ~13 MB
@@ -78,7 +78,6 @@ RUN apt-get -qqy update \
   && apt-get -qqy --no-install-recommends install \
     libfontconfig \
     libfreetype6 \
-    xfonts-cyrillic \
     xfonts-scalable \
     fonts-liberation \
     fonts-ipafont-gothic \
