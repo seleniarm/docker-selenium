@@ -32,6 +32,8 @@ RUN apt-get update -qqy \
   && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 RUN echo "chromium" > /opt/selenium/browser_name
+RUN google-chrome --version | awk '{print $3}' > /opt/selenium/browser_version
+RUN echo "\"goog:chromeOptions\": {\"binary\": \"/usr/bin/chromium\"}" > /opt/selenium/browser_binary_location
 
 USER 1200
 
