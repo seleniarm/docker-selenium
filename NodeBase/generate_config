@@ -62,9 +62,10 @@ elif [[ "${SE_NODE_BROWSER_NAME}" == "firefox" ]]; then
 elif [[ "${SE_NODE_BROWSER_NAME}" == "MicrosoftEdge" ]]; then
     SE_NODE_BROWSER_VERSION=$(short_version $(microsoft-edge --version | awk '{print $3}'))
 fi
+SE__BROWSER_BINARY_LOCATION=$(cat /opt/selenium/browser_binary_location)
 
 if [[ -z "$SE_NODE_STEREOTYPE" ]]; then
-SE_NODE_STEREOTYPE="{\"browserName\": \"${SE_NODE_BROWSER_NAME}\", \"browserVersion\": \"${SE_NODE_BROWSER_VERSION}\", \"platformName\": \"Linux\"}"
+SE_NODE_STEREOTYPE="{\"browserName\": \"${SE_NODE_BROWSER_NAME}\", \"browserVersion\": \"${SE_NODE_BROWSER_VERSION}\", \"platformName\": \"Linux\", ${SE__BROWSER_BINARY_LOCATION}}"
 else
 SE_NODE_STEREOTYPE="$SE_NODE_STEREOTYPE"
 fi
