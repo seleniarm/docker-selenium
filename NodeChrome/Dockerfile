@@ -7,20 +7,24 @@ LABEL authors=${AUTHORS}
 USER root
 
 #============================================
-# Google Chrome
+# Chromium and chromedriver from Debian
 #============================================
-# can specify versions by CHROME_VERSION;
-#  e.g. google-chrome-stable
-#       google-chrome-beta
-#       google-chrome-unstable
-#============================================
-ARG CHROME_VERSION="google-chrome-stable"
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor | tee /etc/apt/trusted.gpg.d/google.gpg >/dev/null \
-  && echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
-  && apt-get update -qqy \
-  && apt-get -qqy install \
-    ${CHROME_VERSION:-google-chrome-stable} \
-  && rm /etc/apt/sources.list.d/google-chrome.list \
+ARG DEBIAN_VERSION=bullseye
+RUN echo "deb [signed-by=/usr/share/keyrings/debian-${DEBIAN_VERSION}.gpg] http://deb.debian.org/debian ${DEBIAN_VERSION} main" > /etc/apt/sources.list.d/debian.list \
+  && echo "deb [signed-by=/usr/share/keyrings/debian-${DEBIAN_VERSION}-updates.gpg] http://deb.debian.org/debian ${DEBIAN_VERSION}-updates main" >> /etc/apt/sources.list.d/debian.list \
+  && echo "deb [signed-by=/usr/share/keyrings/debian-security-${DEBIAN_VERSION}.gpg] http://deb.debian.org/debian-security ${DEBIAN_VERSION}-security main contrib non-free" >> /etc/apt/sources.list.d/debian.list \
+  && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D386FA1D9 \
+  && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131 \
+  && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 112695A0E562B32A \
+  && apt-key export 386FA1D9 | sudo gpg --dearmour -o /usr/share/keyrings/debian-${DEBIAN_VERSION}.gpg \
+  && apt-key export 2643E131 | sudo gpg --dearmour -o /usr/share/keyrings/debian-${DEBIAN_VERSION}-updates.gpg \
+  && apt-key export E562B32A | sudo gpg --dearmour -o /usr/share/keyrings/debian-security-${DEBIAN_VERSION}.gpg
+
+COPY chromium.pref /etc/apt/preferences.d/chromium.pref
+
+RUN apt-get update -qqy \
+  && apt-get -qqy install chromium chromium-driver \
+  && rm /etc/apt/sources.list.d/debian.list \
   && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 #=================================
@@ -32,32 +36,8 @@ RUN /opt/bin/wrap_chrome_binary
 USER 1200
 
 #============================================
-# Chrome webdriver
-#============================================
-# can specify versions by CHROME_DRIVER_VERSION
-# Latest released version will be used by default
-#============================================
-ARG CHROME_DRIVER_VERSION
-RUN if [ ! -z "$CHROME_DRIVER_VERSION" ]; \
-  then CHROME_DRIVER_URL=https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/$CHROME_DRIVER_VERSION/linux64/chromedriver-linux64.zip ; \
-  else echo "Geting ChromeDriver latest version from https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_" \
-    && CHROME_MAJOR_VERSION=$(google-chrome --version | sed -E "s/.* ([0-9]+)(\.[0-9]+){3}.*/\1/") \
-    && CHROME_DRIVER_VERSION=$(wget -qO- https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_${CHROME_MAJOR_VERSION} | sed 's/\r$//') \
-    && CHROME_DRIVER_URL=https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/$CHROME_DRIVER_VERSION/linux64/chromedriver-linux64.zip ; \
-  fi \
-  && echo "Using ChromeDriver from: "$CHROME_DRIVER_URL \
-  && echo "Using ChromeDriver version: "$CHROME_DRIVER_VERSION \
-  && wget --no-verbose -O /tmp/chromedriver_linux64.zip $CHROME_DRIVER_URL \
-  && rm -rf /opt/selenium/chromedriver \
-  && unzip /tmp/chromedriver_linux64.zip -d /opt/selenium \
-  && rm /tmp/chromedriver_linux64.zip \
-  && mv /opt/selenium/chromedriver-linux64/chromedriver /opt/selenium/chromedriver-$CHROME_DRIVER_VERSION \
-  && chmod 755 /opt/selenium/chromedriver-$CHROME_DRIVER_VERSION \
-  && sudo ln -fs /opt/selenium/chromedriver-$CHROME_DRIVER_VERSION /usr/bin/chromedriver
-
-#============================================
 # Dumping Browser information for config
 #============================================
 RUN echo "chrome" > /opt/selenium/browser_name
-RUN google-chrome --version | awk '{print $3}' > /opt/selenium/browser_version
-RUN echo "\"goog:chromeOptions\": {\"binary\": \"/usr/bin/google-chrome\"}" > /opt/selenium/browser_binary_location
+RUN chromium --version | awk '{print $2}' > /opt/selenium/browser_version
+RUN echo "\"goog:chromeOptions\": {\"binary\": \"/usr/bin/chromium\"}" > /opt/selenium/browser_binary_location

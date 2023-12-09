@@ -11,11 +11,24 @@ jobs:
   build-and-test:
     name: Build & test Docker images with random user
     runs-on: ubuntu-latest
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
     strategy:
+      fail-fast: false
       matrix:
         use-random-user: [false, true]
+        platform: [linux/amd64, linux/arm64]
     steps:
       - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
       - name: Output Docker info
         run: docker info
       - name: Set up Python
@@ -38,13 +51,13 @@ jobs:
       - name: Sets build date
         run: echo "BUILD_DATE=$(date '+%Y%m%d')" >> $GITHUB_ENV
       - name: Build Docker images
-        run: VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} make build
+        run: NAME=localhost:5000/selenium BUILD_ARGS="--platform ${{ matrix.platform }} --push" VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} make build
       - name: Test Docker images
         uses: nick-invision/retry@v2.9.0
         with:
           timeout_minutes: 20
           max_attempts: 3
           command: |
-            USE_RANDOM_USER_ID=${USE_RANDOM_USER} VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} make test
+            USE_RANDOM_USER_ID=${USE_RANDOM_USER} SKIP_BUILD=true NAME=localhost:5000/selenium VERSION=${BRANCH} PLATFORM=${{ matrix.platform }} BUILD_DATE=${BUILD_DATE} make test
         env:
           USE_RANDOM_USER: ${{ matrix.use-random-user }}

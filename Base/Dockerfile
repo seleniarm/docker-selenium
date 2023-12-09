@@ -1,14 +1,10 @@
 FROM ubuntu:jammy-20231004
 LABEL authors="Selenium <selenium-developers@googlegroups.com>"
 
+ARG TARGETARCH
+ARG TARGETVARIANT
 ARG VERSION
 ARG RELEASE=selenium-${VERSION}
-#================================================
-# Customize sources for apt-get
-#================================================
-RUN  echo "deb http://archive.ubuntu.com/ubuntu jammy main universe\n" > /etc/apt/sources.list \
-  && echo "deb http://archive.ubuntu.com/ubuntu jammy-updates main universe\n" >> /etc/apt/sources.list \
-  && echo "deb http://security.ubuntu.com/ubuntu jammy-security main universe\n" >> /etc/apt/sources.list
 
 # No interactive frontend during docker build
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -33,8 +29,16 @@ RUN apt-get -qqy update \
     curl \
     supervisor \
     gnupg2 \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
-  && sed -i 's/securerandom\.source=file:\/dev\/random/securerandom\.source=file:\/dev\/urandom/' ./usr/lib/jvm/java-11-openjdk-amd64/conf/security/java.security
+  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+#===================
+
+RUN if [ $TARGETARCH = "arm" ] && [ $TARGETVARIANT = "v7" ]; then \
+       export ARCH=armhf ; \
+    else \
+       export ARCH=$TARGETARCH ; \
+    fi \
+    && sed -i 's/securerandom\.source=file:\/dev\/random/securerandom\.source=file:\/dev\/urandom/' ./usr/lib/jvm/java-11-openjdk-$ARCH/conf/security/java.security
 
 #===================
 # Timezone settings

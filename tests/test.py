@@ -20,6 +20,7 @@ http_proxy = os.environ.get('http_proxy', '')
 https_proxy = os.environ.get('https_proxy', '')
 no_proxy = os.environ.get('no_proxy', '')
 SKIP_BUILD = os.environ.get('SKIP_BUILD', False)
+PLATFORM = os.environ.get('PLATFORM')
 
 try:
     client = docker.from_env()
@@ -145,6 +146,7 @@ def launch_container(container, **kwargs):
                                          detach=True,
                                          environment=environment,
                                          shm_size="2G",
+                                         platform=PLATFORM,
                                          **kwargs).short_id
     logger.info("%s up and running" % container)
     return container_id

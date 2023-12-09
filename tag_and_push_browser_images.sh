@@ -20,7 +20,7 @@ echo "Tagging images for browser ${BROWSER}, version ${VERSION}, build date ${BU
 case "${BROWSER}" in
 
 chrome)
-  CHROME_VERSION=$(docker run --rm selenium/node-chrome:${TAG_VERSION} google-chrome --version | awk '{print $3}')
+  CHROME_VERSION=$(docker run --rm selenium/node-chrome:${TAG_VERSION} chromium --version | awk '{print $2}')
   echo "Chrome version -> "${CHROME_VERSION}
   CHROME_SHORT_VERSION="$(short_version ${CHROME_VERSION})"
   echo "Short Chrome version -> "${CHROME_SHORT_VERSION}
@@ -35,21 +35,21 @@ chrome)
       # Browser version and browser driver version plus build date
       ${CHROME_VERSION}-chromedriver-${CHROMEDRIVER_VERSION}-${BUILD_DATE}
       # Browser version and browser driver version
-      ${CHROME_VERSION}-chromedriver-${CHROMEDRIVER_VERSION}      
+      ${CHROME_VERSION}-chromedriver-${CHROMEDRIVER_VERSION}
       # Browser version and build date
       ${CHROME_VERSION}-${BUILD_DATE}
       # Browser version
-      ${CHROME_VERSION}      
+      ${CHROME_VERSION}
       ## Short versions
       ${CHROME_SHORT_VERSION}-chromedriver-${CHROMEDRIVER_SHORT_VERSION}-grid-${TAG_VERSION}
       # Browser version and browser driver version plus build date
       ${CHROME_SHORT_VERSION}-chromedriver-${CHROMEDRIVER_SHORT_VERSION}-${BUILD_DATE}
       # Browser version and browser driver version
-      ${CHROME_SHORT_VERSION}-chromedriver-${CHROMEDRIVER_SHORT_VERSION}      
+      ${CHROME_SHORT_VERSION}-chromedriver-${CHROMEDRIVER_SHORT_VERSION}
       # Browser version and build date
       ${CHROME_SHORT_VERSION}-${BUILD_DATE}
       # Browser version
-      ${CHROME_SHORT_VERSION}      
+      ${CHROME_SHORT_VERSION}
   )
 
   for chrome_tag in "${CHROME_TAGS[@]}"
@@ -83,17 +83,17 @@ edge)
       # Browser version and build date
       ${EDGE_VERSION}-${BUILD_DATE}
       # Browser version
-      ${EDGE_VERSION}      
+      ${EDGE_VERSION}
       ## Short versions
       ${EDGE_SHORT_VERSION}-edgedriver-${EDGEDRIVER_SHORT_VERSION}-grid-${TAG_VERSION}
       # Browser version and browser driver version plus build date
       ${EDGE_SHORT_VERSION}-edgedriver-${EDGEDRIVER_SHORT_VERSION}-${BUILD_DATE}
       # Browser version and browser driver version
-      ${EDGE_SHORT_VERSION}-edgedriver-${EDGEDRIVER_SHORT_VERSION}      
+      ${EDGE_SHORT_VERSION}-edgedriver-${EDGEDRIVER_SHORT_VERSION}
       # Browser version and build date
       ${EDGE_SHORT_VERSION}-${BUILD_DATE}
       # Browser version
-      ${EDGE_SHORT_VERSION}      
+      ${EDGE_SHORT_VERSION}
   )
 
   for edge_tag in "${EDGE_TAGS[@]}"
@@ -122,21 +122,21 @@ firefox)
       # Browser version and browser driver version plus build date
       ${FIREFOX_VERSION}-geckodriver-${GECKODRIVER_VERSION}-${BUILD_DATE}
       # Browser version and browser driver version
-      ${FIREFOX_VERSION}-geckodriver-${GECKODRIVER_VERSION}      
+      ${FIREFOX_VERSION}-geckodriver-${GECKODRIVER_VERSION}
       # Browser version and build date
       ${FIREFOX_VERSION}-${BUILD_DATE}
       # Browser version
-      ${FIREFOX_VERSION}      
+      ${FIREFOX_VERSION}
       ## Short versions
       ${FIREFOX_SHORT_VERSION}-geckodriver-${GECKODRIVER_SHORT_VERSION}-grid-${TAG_VERSION}
       # Browser version and browser driver version plus build date
       ${FIREFOX_SHORT_VERSION}-geckodriver-${GECKODRIVER_SHORT_VERSION}-${BUILD_DATE}
       # Browser version and browser driver version
-      ${FIREFOX_SHORT_VERSION}-geckodriver-${GECKODRIVER_SHORT_VERSION}      
+      ${FIREFOX_SHORT_VERSION}-geckodriver-${GECKODRIVER_SHORT_VERSION}
       # Browser version and build date
       ${FIREFOX_SHORT_VERSION}-${BUILD_DATE}
       # Browser version
-      ${FIREFOX_SHORT_VERSION}      
+      ${FIREFOX_SHORT_VERSION}
   )
 
   for firefox_tag in "${FIREFOX_TAGS[@]}"
