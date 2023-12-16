@@ -11,12 +11,14 @@ USER root
 
 #=========
 # Firefox
+# Available versions at https://launchpad.net/~mozillateam/+archive/ubuntu/ppa
 #=========
+ARG FIREFOX_VERSION=121.0+build1-0ubuntu0.22.04.1~mt1
 RUN apt-get -qqy update \
   && apt-get -qqy install libavcodec-extra software-properties-common \
   && add-apt-repository ppa:mozillateam/ppa \
   && apt-get -qqy update \
-  && apt-get -qqy install -t 'o=LP-PPA-mozillateam' firefox \
+  && apt-get -qqy install -t 'o=LP-PPA-mozillateam' firefox=${FIREFOX_VERSION} \
   && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 #============

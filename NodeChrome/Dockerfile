@@ -8,6 +8,7 @@ USER root
 
 #============================================
 # Chromium and chromedriver from Debian
+# Available versions at: https://packages.debian.org/search?keywords=chromium
 #============================================
 COPY chromium.pref /etc/apt/preferences.d/chromium.pref
 
@@ -15,6 +16,8 @@ ARG DEBIAN_VERSION=bullseye
 ARG REPO_FILE=/etc/apt/sources.list.d/debian.list
 ARG KEY_SERVER=keyserver.ubuntu.com
 ARG DEBIAN_KEY_LOCATION=/usr/share/keyrings/debian
+ARG CHROMIUM_VERSION=120.0.6099.109-1~deb11u1
+ARG CHROMEDIVER_VERSION=${CHROMIUM_VERSION}
 RUN mkdir /home/seluser/.gnupg && mkdir -p ${DEBIAN_KEY_LOCATION} \
   && gpg --no-default-keyring --keyring ${DEBIAN_KEY_LOCATION}/${DEBIAN_VERSION}.gpg \
          --keyserver ${KEY_SERVER} \
@@ -32,7 +35,7 @@ RUN mkdir /home/seluser/.gnupg && mkdir -p ${DEBIAN_KEY_LOCATION} \
   && echo "deb [signed-by=${DEBIAN_KEY_LOCATION}/security-${DEBIAN_VERSION}.gpg] http://deb.debian.org/debian-security ${DEBIAN_VERSION}-security main contrib non-free" \
           >> ${REPO_FILE} \
   && apt-get update -qqy \
-  && apt-get -qqy install chromium chromium-driver \
+  && apt-get -qqy install chromium=${CHROMIUM_VERSION} chromium-driver=${CHROMEDIVER_VERSION} \
   && rm ${REPO_FILE} \
   && rm -rf ${DEBIAN_KEY_LOCATION}/ /var/lib/apt/lists/* /var/cache/apt/*
 
