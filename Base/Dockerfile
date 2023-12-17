@@ -18,9 +18,12 @@ USER root
 #================================================
 # Customize sources for apt-get
 #================================================
-RUN  echo "deb http://archive.ubuntu.com/ubuntu jammy main universe\n" > /etc/apt/sources.list \
-  && echo "deb http://archive.ubuntu.com/ubuntu jammy-updates main universe\n" >> /etc/apt/sources.list \
-  && echo "deb http://security.ubuntu.com/ubuntu jammy-security main universe\n" >> /etc/apt/sources.list
+RUN  echo "deb [arch=amd64,i386] http://archive.ubuntu.com/ubuntu jammy main universe\n" > /etc/apt/sources.list \
+  && echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main universe\n" >> /etc/apt/sources.list \
+  && echo "deb [arch=amd64,i386] http://archive.ubuntu.com/ubuntu jammy-updates main universe\n" >> /etc/apt/sources.list \
+  && echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main universe\n" >> /etc/apt/sources.list \
+  && echo "deb [arch=amd64,i386] http://security.ubuntu.com/ubuntu jammy-security main universe\n" >> /etc/apt/sources.list \
+  && echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main universe\n" >> /etc/apt/sources.list
 
 # No interactive frontend during docker build
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -47,7 +50,8 @@ RUN apt-get -qqy update \
     gnupg2 \
     libnss3-tools \
   && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
-  && sed -i 's/securerandom\.source=file:\/dev\/random/securerandom\.source=file:\/dev\/urandom/' ./usr/lib/jvm/java-11-openjdk-amd64/conf/security/java.security
+  && ARCH=$(arch | sed s/aarch64/arm64/ | sed s/x86_64/amd64/) \
+  && sed -i 's/securerandom\.source=file:\/dev\/random/securerandom\.source=file:\/dev\/urandom/' ./usr/lib/jvm/java-11-openjdk-${ARCH}/conf/security/java.security
 
 #===================
 # Timezone settings

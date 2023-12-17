@@ -35,6 +35,20 @@ all: hub \
 	standalone_docker \
 	video
 
+all_amd64: all
+
+all_arm64: hub \
+	distributor \
+	router \
+	sessions \
+	sessionqueue \
+	event_bus \
+	firefox \
+	chromium \
+	docker \
+	standalone_firefox \
+	standalone_chromium \
+	standalone_docker
 
 build: all
 
@@ -350,6 +364,12 @@ test: test_chrome \
  test_chromium \
  test_chromium_standalone
 
+test_amd64: test
+
+test_arm64: test_chromium \
+ test_firefox \
+ test_chromium_standalone \
+ test_firefox_standalone
 
 test_chrome:
 	VERSION=$(TAG_VERSION) NAMESPACE=$(NAMESPACE) ./tests/bootstrap.sh NodeChrome
@@ -447,6 +467,8 @@ chart_test_parallel_autoscaling:
 
 .PHONY: \
 	all \
+	all_amd64 \
+	all_arm64 \
 	base \
 	build \
 	ci \
@@ -471,4 +493,6 @@ chart_test_parallel_autoscaling:
 	tag_latest \
 	tag_and_push_browser_images \
 	test \
+	test_amd64 \
+	test_arm64 \
 	video
