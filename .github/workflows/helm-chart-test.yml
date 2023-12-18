@@ -2,7 +2,11 @@ name: Lint and Test Helm Charts
 
 on:
   push:
+    paths-ignore:
+      - '.circleci/**'
   pull_request:
+    paths-ignore:
+      - '.circleci/**'
   workflow_dispatch:
 
 permissions:

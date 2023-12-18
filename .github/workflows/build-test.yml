@@ -2,7 +2,11 @@ name: Build & test
 
 on:
   push:
+    paths-ignore:
+      - '.circleci/**'
   pull_request:
+    paths-ignore:
+      - '.circleci/**'
 
 permissions:
   contents: read
