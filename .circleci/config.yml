@@ -141,6 +141,96 @@ jobs:
             ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
             USE_RANDOM_USER_ID=${USE_RANDOM_USER} NAMESPACE=${NAMESPACE} VERSION=${BRANCH}_${ARCH} BUILD_DATE=${BUILD_DATE} SKIP_BUILD=true make test_${ARCH}
 
+  manifest-multi-arch:
+    parameters:
+      image-name:
+        type: string
+      machine-type:
+        type: executor
+    executor: << parameters.machine-type >>
+    environment:
+      NAMESPACE: seleniarm
+      BUILD_DATE: today
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - multi-arch-images-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-linux/arm64
+      - restore_cache:
+          keys:
+            - multi-arch-images-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-linux/amd64
+      - run: uname -a
+      - run: docker info
+      - run:
+          name: "Load built images from cache into Docker"
+          command: |
+            echo "CIRCLE_WORKFLOW_ID = " $CIRCLE_WORKFLOW_ID
+            docker load -i images/arm64.tar
+            docker load -i images/amd64.tar
+      - run:
+          name: "Create manifest"
+          command: |
+            export VERSION=${CIRCLE_BRANCH//\//-}
+            export IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            export MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            export ARM_TAG=${VERSION}_arm64-${BUILD_DATE}
+            export AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
+            echo "Creating ${IMAGE_NAME}:${MANIFEST_TAG} based on ${IMAGE_NAME}:${ARM_TAG} and ${IMAGE_NAME}:${AMD_TAG}"
+            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
+            docker push ${IMAGE_NAME}:${ARM_TAG}
+            docker push ${IMAGE_NAME}:${AMD_TAG}
+            docker manifest create ${IMAGE_NAME}:${MANIFEST_TAG} ${IMAGE_NAME}:${ARM_TAG} ${IMAGE_NAME}:${AMD_TAG}
+            docker manifest push ${IMAGE_NAME}:${MANIFEST_TAG}
+      - run:
+          name: "Inspect manifest"
+          command: |
+            export VERSION=${CIRCLE_BRANCH//\//-}
+            export IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            export MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            docker manifest inspect ${IMAGE_NAME}:${MANIFEST_TAG}
+
+  manifest-amd-only-arch:
+    parameters:
+      image-name:
+        type: string
+      machine-type:
+        type: executor
+    executor: << parameters.machine-type >>
+    environment:
+      NAMESPACE: seleniarm
+      BUILD_DATE: today
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - multi-arch-images-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-linux/amd64
+      - run: uname -a
+      - run: docker info
+      - run:
+          name: "Load built images from cache into Docker"
+          command: |
+            echo "CIRCLE_WORKFLOW_ID = " $CIRCLE_WORKFLOW_ID
+            docker load -i images/amd64.tar
+      - run:
+          name: "Create manifest"
+          command: |
+            export VERSION=${CIRCLE_BRANCH//\//-}
+            export IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            export MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            export AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
+            echo "Creating ${IMAGE_NAME}:${MANIFEST_TAG} based on ${IMAGE_NAME}:${AMD_TAG}"
+            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
+            docker push ${IMAGE_NAME}:${AMD_TAG}
+            docker manifest create ${IMAGE_NAME}:${MANIFEST_TAG} ${IMAGE_NAME}:${AMD_TAG}
+            docker manifest push ${IMAGE_NAME}:${MANIFEST_TAG}
+      - run:
+          name: "Inspect manifest"
+          command: |
+            export VERSION=${CIRCLE_BRANCH//\//-}
+            export IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            export MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            docker manifest inspect ${IMAGE_NAME}:${MANIFEST_TAG}
+
   deploy-multi-arch:
     parameters:
       platforms:
@@ -365,6 +455,20 @@ workflows:
           requires: [build-multi-arch-amd64]
           platforms: linux/amd64
           machine-type: ubuntu2204amd64
+      - manifest-multi-arch:
+          name: manifest-multi-arch-<< matrix.image-name >>
+          requires: [test-multi-arch-arm64, test-multi-arch-amd64]
+          machine-type: ubuntu2204amd64
+          matrix:
+            parameters:
+              image-name: [ base, node-base, hub, node-chromium, standalone-chromium, node-firefox, standalone-firefox ]
+      - manifest-amd-only-arch:
+          name: manifest-amd-arch-<< matrix.image-name >>
+          requires: [test-multi-arch-amd64]
+          machine-type: ubuntu2204amd64
+          matrix:
+            parameters:
+              image-name: [ node-chrome, standalone-chrome, node-edge, standalone-edge ]
 
   deploy-multi-arch-full-grid:
     jobs:
