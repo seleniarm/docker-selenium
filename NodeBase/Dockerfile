@@ -4,13 +4,16 @@ ARG AUTHORS
 FROM ${NAMESPACE}/base:${VERSION}
 LABEL authors=${AUTHORS}
 
+ARG NOVNC_VERSION="1.4.0"
+ARG WEBSOCKIFY_VERSION="0.11.0"
+
 USER root
 
 #==============
 # Xvfb
 #==============
 RUN apt-get update -qqy \
-  && apt-get -qqy install \
+  && apt-get -qqy --no-install-recommends install \
     xvfb \
     pulseaudio \
   && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
@@ -40,7 +43,7 @@ RUN apt-get -qqy update \
 # VNC
 #=====
 RUN apt-get update -qqy \
-  && apt-get -qqy install \
+  && apt-get -qqy --no-install-recommends install \
   x11vnc \
   && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
@@ -49,7 +52,7 @@ RUN apt-get update -qqy \
 # A fast, lightweight and responsive window manager
 #=========
 RUN apt-get update -qqy \
-  && apt-get -qqy install \
+  && apt-get -qqy --no-install-recommends install \
     fluxbox \
   && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
@@ -64,7 +67,7 @@ RUN apt-get update -qqy \
 # fonts-ipafont-gothic     ~13 MB
 # fonts-wqy-zenhei         ~17 MB
 # fonts-tlwg-loma-otf      ~300 KB
-# ttf-ubuntu-font-family   ~5 MB
+# fonts-ubuntu             ~5 MB
 #   Ubuntu Font Family, sans-serif typeface hinted for clarity
 # Removed packages:
 # xfonts-100dpi            ~6 MB
@@ -84,7 +87,7 @@ RUN apt-get -qqy update \
     fonts-ipafont-gothic \
     fonts-wqy-zenhei \
     fonts-tlwg-loma-otf \
-    # ttf-ubuntu-font-family \
+    fonts-ubuntu \
     fonts-noto-color-emoji \
   && rm -rf /var/lib/apt/lists/* \
   && apt-get -qyy clean
@@ -92,8 +95,6 @@ RUN apt-get -qqy update \
 ########################################
 # noVNC exposes VNC through a web page #
 ########################################
-ENV NOVNC_VERSION="1.4.0" \
-    WEBSOCKIFY_VERSION="0.11.0"
 RUN  wget -nv -O noVNC.zip \
        "https://github.com/novnc/noVNC/archive/refs/tags/v${NOVNC_VERSION}.zip" \
   && unzip -x noVNC.zip \
@@ -104,24 +105,38 @@ RUN  wget -nv -O noVNC.zip \
       "https://github.com/novnc/websockify/archive/refs/tags/v${WEBSOCKIFY_VERSION}.zip" \
   && unzip -x websockify.zip \
   && rm websockify.zip \
-  && rm -rf websockify-${WEBSOCKIFY_VERSION}/tests \
-  && mv websockify-${WEBSOCKIFY_VERSION} /opt/bin/noVNC/utils/websockify
+  && mv websockify-${WEBSOCKIFY_VERSION} /opt/bin/noVNC/utils/websockify \
+  && rm -rf /opt/bin/noVNC/utils/websockify/docker /opt/bin/noVNC/utils/websockify/tests
 
 #=========================================================================================================================================
 # Run this command for executable file permissions for /dev/shm when this is a "child" container running in Docker Desktop and WSL2 distro
 #=========================================================================================================================================
 RUN chmod +x /dev/shm
 
+# Creating base directory for Xvfb
+RUN mkdir -p /tmp/.X11-unix && \
+    fix-permissions /tmp/.X11-unix
+
+#==============================
+# Generating the VNC password using initial password in Base image
+# Changing ownership to ${SEL_USER}, so the service can be started
+#==============================
+
+RUN mkdir -p ${HOME}/.vnc \
+    && x11vnc -storepasswd $(cat ${SEL_DIR}/initialPasswd) ${HOME}/.vnc/passwd \
+    && chown -R "${SEL_UID}:${SEL_GID}" ${HOME}/.vnc \
+    && fix-permissions ${HOME}/.vnc
+
 #===================================================
 # Run the following commands as non-privileged user
 #===================================================
 
-USER 1200
+USER ${SEL_UID}
 
 #==============================
 # Scripts to run Selenium Node and XVFB
 #==============================
-COPY start-selenium-node.sh \
+COPY --chown="${SEL_UID}:${SEL_GID}" start-selenium-node.sh \
       start-xvfb.sh \
       /opt/bin/
 
@@ -153,7 +168,7 @@ RUN sudo chmod -R 775 ${HOME} \
 #==============================
 # Scripts to run fluxbox, x11vnc and noVNC
 #==============================
-COPY start-vnc.sh \
+COPY --chown="${SEL_UID}:${SEL_GID}" start-vnc.sh \
       start-novnc.sh \
       /opt/bin/
 
@@ -185,8 +200,6 @@ ENV SE_DRAIN_AFTER_SESSION_COUNT 0
 # Setting Selenium Manager to work offline
 ENV SE_OFFLINE true
 
-
-
 #========================
 # Selenium Configuration
 #========================
@@ -210,6 +223,6 @@ RUN  mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
 USER 1200
 
 # Copying configuration script generator
-COPY generate_config /opt/bin/generate_config
+COPY --chown="${SEL_UID}:${SEL_GID}" generate_config /opt/bin/generate_config
 
 EXPOSE 5900

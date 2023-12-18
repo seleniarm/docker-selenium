@@ -15,10 +15,10 @@ USER root
 #       google-chrome-unstable
 #============================================
 ARG CHROME_VERSION="google-chrome-stable"
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor | tee /etc/apt/trusted.gpg.d/google.gpg >/dev/null \
   && echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
   && apt-get update -qqy \
-  && apt-get -qqy install \
+  && apt-get -qqy --no-install-recommends install \
     ${CHROME_VERSION:-google-chrome-stable} \
   && rm /etc/apt/sources.list.d/google-chrome.list \
   && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
@@ -28,8 +28,6 @@ RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key
 #=================================
 COPY wrap_chrome_binary /opt/bin/wrap_chrome_binary
 RUN /opt/bin/wrap_chrome_binary
-
-USER 1200
 
 #============================================
 # Chrome webdriver
@@ -49,13 +47,16 @@ RUN if [ ! -z "$CHROME_DRIVER_VERSION" ]; \
   && echo "Using ChromeDriver version: "$CHROME_DRIVER_VERSION \
   && wget --no-verbose -O /tmp/chromedriver_linux64.zip $CHROME_DRIVER_URL \
   && rm -rf /opt/selenium/chromedriver \
-  && sudo unzip /tmp/chromedriver_linux64.zip -d /opt/selenium \
+  && unzip /tmp/chromedriver_linux64.zip -d /opt/selenium \
   && rm /tmp/chromedriver_linux64.zip \
-  && sudo mv /opt/selenium/chromedriver-linux64/chromedriver /opt/selenium/chromedriver-$CHROME_DRIVER_VERSION \
-  && sudo chmod 755 /opt/selenium/chromedriver-$CHROME_DRIVER_VERSION \
-  && sudo ln -fs /opt/selenium/chromedriver-$CHROME_DRIVER_VERSION /usr/bin/chromedriver
+  && mv /opt/selenium/chromedriver-linux64/chromedriver /opt/selenium/chromedriver-$CHROME_DRIVER_VERSION \
+  && ln -fs /opt/selenium/chromedriver-$CHROME_DRIVER_VERSION /usr/bin/chromedriver
+
+USER ${SEL_UID}
 
 #============================================
-# Dumping Browser name and version for config
+# Dumping Browser information for config
 #============================================
 RUN echo "chrome" > /opt/selenium/browser_name
+RUN google-chrome --version | awk '{print $3}' > /opt/selenium/browser_version
+RUN echo "\"goog:chromeOptions\": {\"binary\": \"/usr/bin/google-chrome\"}" > /opt/selenium/browser_binary_location

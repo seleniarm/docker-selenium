@@ -1,22 +1,28 @@
-# FROM ubuntu:focal-20210416
-#FROM ubuntu:focal-20210827
-#FROM ubuntu:focal-20211006
-#FROM ubuntu:focal-20220302
-#FROM ubuntu:focal-20220415
-#FROM ubuntu:focal-20220531
-#FROM ubuntu:focal-20230301
-FROM debian:bullseye
+FROM ubuntu:jammy-20231128
 LABEL authors="Selenium <selenium-developers@googlegroups.com>"
 
+# Arguments to define the version of dependencies to download
+ARG VERSION
+ARG RELEASE=selenium-${VERSION}
+# Default value should be aligned with upstream Selenium (https://github.com/SeleniumHQ/selenium/blob/trunk/java/maven_deps.bzl)
+ARG OPENTELEMETRY_VERSION=1.28.0
+ARG GRPC_VERSION=1.57.1
+
+#Arguments to define the user running Selenium
+ARG SEL_USER=seluser
+ARG SEL_PASSWD=secret
+ARG SEL_UID=1200
+ARG SEL_GID=1201
+
+USER root
+ARG TARGETARCH
+ARG TARGETVARIANT
 #================================================
 # Customize sources for apt-get
 #================================================
-#RUN  echo "deb http://archive.ubuntu.com/ubuntu focal main universe\n" > /etc/apt/sources.list \
-#  && echo "deb http://archive.ubuntu.com/ubuntu focal-updates main universe\n" >> /etc/apt/sources.list \
-#  && echo "deb http://security.ubuntu.com/ubuntu focal-security main universe\n" >> /etc/apt/sources.list
-
-ARG TARGETARCH
-ARG TARGETVARIANT
+RUN  echo "deb http://archive.ubuntu.com/ubuntu jammy main universe\n" > /etc/apt/sources.list \
+  && echo "deb http://archive.ubuntu.com/ubuntu jammy-updates main universe\n" >> /etc/apt/sources.list \
+  && echo "deb http://security.ubuntu.com/ubuntu jammy-security main universe\n" >> /etc/apt/sources.list
 
 # No interactive frontend during docker build
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -42,7 +48,8 @@ RUN apt-get -qqy update \
     curl \
     supervisor \
     gnupg2 \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/* 
+    libnss3-tools \
+  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 #===================
 
@@ -59,28 +66,57 @@ RUN if [ $TARGETARCH = "arm" ] && [ $TARGETVARIANT = "v7" ]; then \
 # Possible alternative: https://github.com/docker/docker/issues/3359#issuecomment-32150214
 #===================
 ENV TZ "UTC"
-RUN echo "${TZ}" > /etc/timezone \
-  && dpkg-reconfigure --frontend noninteractive tzdata
+RUN ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata && \
+    cat /etc/timezone
+
+#======================================
+# Configure environement
+#======================================
+ENV SEL_USER=${SEL_USER}
+ENV SEL_UID=${SEL_UID}
+ENV SEL_GID=${SEL_GID}
+ENV HOME=/home/${SEL_USER}
+ENV SEL_DIR=/opt/selenium
+ENV EXTERNAL_JARS=/external_jars
+ENV SE_DOWNLOAD_DIR=${HOME}/Downloads
+
+# Copy a script that we will use to correct permissions after running certain commands
+COPY fix-permissions /usr/local/bin/fix-permissions
+RUN chmod a+rx /usr/local/bin/fix-permissions
 
 #========================================
 # Add normal user and group with passwordless sudo
 #========================================
-RUN groupadd seluser \
-         --gid 1201 \
-  && useradd seluser \
-         --create-home \
-         --gid 1201 \
-         --shell /bin/bash \
-         --uid 1200 \
-  && usermod -a -G sudo seluser \
-  && echo 'ALL ALL = (ALL) NOPASSWD: ALL' >> /etc/sudoers \
-  && echo 'seluser:secret' | chpasswd
-ENV HOME=/home/seluser
+RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su \
+    && sed -i.bak -e 's/^%admin/#%admin/' /etc/sudoers \
+    && sed -i.bak -e 's/^%sudo/#%sudo/' /etc/sudoers \
+    && echo 'ALL ALL = (ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+RUN groupadd ${SEL_USER} \
+        --gid ${SEL_GID} \
+    && useradd ${SEL_USER} \
+        --no-log-init \
+        --create-home \
+        --gid ${SEL_GID} \
+        --shell /bin/bash \
+        --uid ${SEL_UID} \
+    && chmod g+w /etc/passwd \
+    && echo "${SEL_USER}:${SEL_PASSWD}" | chpasswd
+
+#======================================
+# Create directories needed
+#======================================
+RUN mkdir -p ${HOME}/.mozilla ${HOME}/.cache \
+      ${SEL_DIR} ${SEL_DIR}/assets \
+      /var/run/supervisor /var/log/supervisor \
+      ${EXTERNAL_JARS} \
+      ${SE_DOWNLOAD_DIR}
 
 #======================================
 # Add Grid check script
 #======================================
-COPY check-grid.sh entry_point.sh /opt/bin/
+COPY --chown="${SEL_UID}:${SEL_GID}" check-grid.sh entry_point.sh /opt/bin/
 
 #======================================
 # Add Supervisor configuration file
@@ -88,18 +124,12 @@ COPY check-grid.sh entry_point.sh /opt/bin/
 COPY supervisord.conf /etc
 
 #==========
-# Selenium & relaxing permissions for OpenShift and other non-sudo environments
+# Selenium
 #==========
-RUN  mkdir -p /opt/selenium /opt/selenium/assets /var/run/supervisor /var/log/supervisor \
-  && touch /opt/selenium/config.toml \
-  && chmod -R 777 /opt/selenium /opt/selenium/assets /var/run/supervisor /var/log/supervisor /etc/passwd \
-  && wget --no-verbose https://github.com/SeleniumHQ/selenium/releases/download/selenium-4.10.0/selenium-server-4.10.0.jar \
-    -O /opt/selenium/selenium-server.jar \
-  && wget --no-verbose https://repo1.maven.org/maven2/org/seleniumhq/selenium/selenium-http-jdk-client/4.10.0/selenium-http-jdk-client-4.10.0.jar \
-    -O /opt/selenium/selenium-http-jdk-client.jar \
-  && chgrp -R 0 /opt/selenium ${HOME} /opt/selenium/assets /var/run/supervisor /var/log/supervisor \
-  && chmod -R g=u /opt/selenium ${HOME} /opt/selenium/assets /var/run/supervisor /var/log/supervisor \
-  && setfacl -Rm u:seluser:rwx /opt /opt/selenium ${HOME} /opt/selenium/assets /var/run/supervisor /var/log/supervisor
+RUN touch ${SEL_DIR}/config.toml \
+  && wget --no-verbose https://github.com/SeleniumHQ/selenium/releases/download/${RELEASE}/selenium-server-${VERSION}.jar \
+    -O ${SEL_DIR}/selenium-server.jar \
+  && echo "${SEL_PASSWD}" > ${SEL_DIR}/initialPasswd
 
 #=====
 # Download observability related jaegar jars and make them available in a separate directory
@@ -107,25 +137,52 @@ RUN  mkdir -p /opt/selenium /opt/selenium/assets /var/run/supervisor /var/log/su
 #=====
 #RUN curl -fLo /tmp/cs https://github.com/coursier/launchers/raw/master/coursier \
 # RUN if [ `arch` = "aarch64" ] || [ `arch` = "x86_64" ]; then \
-RUN if [ `arch` = "aarch64" ]; then \
-    curl -fL https://github.com/coursier/launchers/raw/master/cs-`arch`-pc-linux.gz | gzip -d > /tmp/cs \
-  && chmod +x /tmp/cs \
-  && mkdir -p /external_jars \
-  && chmod -R 775 /external_jars ; \
-    fi
+#RUN if [ `arch` = "aarch64" ]; then \
+#    curl -fL https://github.com/coursier/launchers/raw/master/cs-`arch`-pc-linux.gz | gzip -d > /tmp/cs \
+#  && chmod +x /tmp/cs \
+#  && mkdir -p /external_jars \
+#  && chmod -R 775 /external_jars ; \
+#    fi
 
-RUN if [ -f "/tmp/cs" ]; then \
-    /tmp/cs fetch --classpath --cache /external_jars io.opentelemetry:opentelemetry-exporter-otlp:1.28.0 io.opentelemetry:opentelemetry-exporter-jaeger:1.28.0 io.grpc:grpc-netty:1.57.1 > /external_jars/.classpath.txt ; \
-    fi
+#RUN if [ -f "/tmp/cs" ]; then \
+#    /tmp/cs fetch --classpath --cache /external_jars io.opentelemetry:opentelemetry-exporter-otlp:1.28.0 io.opentelemetry:opentelemetry-exporter-jaeger:1.28.0 io.grpc:grpc-netty:1.57.1 > /external_jars/.classpath.txt ; \
+#    fi
 
-RUN if [ -f "/tmp/cs" ]; then chmod 664 /external_jars/.classpath.txt ; fi
+#RUN if [ -f "/tmp/cs" ]; then chmod 664 /external_jars/.classpath.txt ; fi
+
+RUN curl -fLo /tmp/cs https://github.com/coursier/launchers/raw/master/coursier \
+  && chmod +x /tmp/cs
+
+RUN /tmp/cs fetch --classpath --cache ${EXTERNAL_JARS} \
+    io.opentelemetry:opentelemetry-exporter-otlp:${OPENTELEMETRY_VERSION} \
+    io.opentelemetry:opentelemetry-exporter-jaeger:${OPENTELEMETRY_VERSION} \
+    io.grpc:grpc-netty:${GRPC_VERSION} > ${EXTERNAL_JARS}/.classpath.txt
+RUN rm -fr /root/.cache/*
+
+# Change ownership of directories
+RUN fix-permissions ${HOME} ${SEL_DIR} ${SEL_DIR}/assets ${EXTERNAL_JARS} ${SE_DOWNLOAD_DIR} /var/run/supervisor /var/log/supervisor
+
+#==========
+# Relaxing permissions for OpenShift and other non-sudo environments
+#==========
+RUN chmod g=u /etc/passwd
 
 #===================================================
 # Run the following commands as non-privileged user
 #===================================================
-USER 1200:1201
+USER ${SEL_UID}:${SEL_GID}
+VOLUME ${SE_DOWNLOAD_DIR}
 
 # Boolean value, maps "--bind-host"
 ENV SE_BIND_HOST false
+
+# A too high maximum number of file descriptors (with the default value
+# inherited from the docker host) can cause issues with some of our tools:
+#  - sanitizers hanging: https://github.com/google/sanitizers/issues/1662
+#  - valgrind crashing: https://stackoverflow.com/a/75293014
+# This is not be a problem on our CI hosts, but developers who run the image
+# on their machines may run into this (e.g., on Arch Linux), so warn them.
+# (Note that .bashrc is only executed in interactive bash shells.)
+RUN echo 'if [[ $(ulimit -n) -gt 200000 ]]; then echo "WARNING: Very high value reported by \"ulimit -n\". Consider passing \"--ulimit nofile=32768\" to \"docker run\"."; fi' >> ${HOME}/.bashrc
 
 CMD ["/opt/bin/entry_point.sh"]
