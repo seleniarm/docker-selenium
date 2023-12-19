@@ -110,7 +110,7 @@ jobs:
         type: executor
     executor: << parameters.machine-type >>
     environment:
-      NAMESPACE: seleniarm
+      NAMESPACE: jamesmortensen1
       BUILD_DATE: today
     steps:
       - checkout
@@ -206,7 +206,7 @@ jobs:
         type: executor
     executor: << parameters.machine-type >>
     environment:
-      NAMESPACE: seleniarm
+      NAMESPACE: jamesmortensen1
       BUILD_DATE: today
     steps:
       - checkout
@@ -261,7 +261,7 @@ jobs:
         type: executor
     executor: << parameters.machine-type >>
     environment:
-      NAMESPACE: seleniarm
+      NAMESPACE: jamesmortensen1
       BUILD_DATE: today
     steps:
       - checkout
@@ -306,7 +306,7 @@ jobs:
         type: executor
     executor: << parameters.machine-type >>
     environment:
-      NAMESPACE: seleniarm
+      NAMESPACE: jamesmortensen1
       BUILD_DATE: today
     steps:
       - checkout
@@ -353,12 +353,12 @@ jobs:
         type: executor
     executor: << parameters.machine-type >>
     environment:
-      NAMESPACE: seleniarm
+      NAMESPACE: jamesmortensen1
       PLATFORMS: << parameters.platforms >>
       BUILD_ARGS: << parameters.build-args >>
       DEPLOY_BRANCH: trunk
       GITHUB_USER: seleniumhq-community
-      GITHUB_REPO: docker-seleniarm
+      GITHUB_REPO: docker-jamesmortensen1
     steps:
       - checkout
       - run:
@@ -368,7 +368,7 @@ jobs:
             echo "Prepare workflow environment variables"
             echo 'export BRANCH='$SELENIUM_VERSION >> $BASH_ENV
             echo 'export BUILD_DATE=$(date '+%Y%m%d')' >> $BASH_ENV
-            echo 'export RELEASE_TAG="seleniarm-v`echo $BRANCH`-`echo $BUILD_DATE`"' >> $BASH_ENV
+            echo 'export RELEASE_TAG="jamesmortensen1-v`echo $BRANCH`-`echo $BUILD_DATE`"' >> $BASH_ENV
             source $BASH_ENV
             echo "Workflow environment variables:"
             echo BRANCH="$BRANCH"
@@ -438,13 +438,13 @@ jobs:
         type: string
     executor: << parameters.machine-type >>
     environment:
-      NAMESPACE: seleniarm
+      NAMESPACE: jamesmortensen1
       PLATFORMS: << parameters.platforms >>
       BUILD_ARGS: << parameters.build-args >>
       MAKE_TARGETS: << parameters.make-targets >>
       DEPLOY_BRANCH: trunk
       GITHUB_USER: seleniumhq-community
-      GITHUB_REPO: docker-seleniarm
+      GITHUB_REPO: docker-jamesmortensen1
     steps:
       - checkout
       - run:
@@ -470,7 +470,7 @@ jobs:
             echo 'export BRANCH='$SELENIUM_VERSION >> $BASH_ENV
             echo 'export BUILD_DATE=$(date '+%Y%m%d')' >> $BASH_ENV
             #echo 'export BUILD_DATE=20230110' >> $BASH_ENV
-            echo 'export RELEASE_TAG="seleniarm-v`echo $BRANCH`-`echo $BUILD_DATE`"' >> $BASH_ENV
+            echo 'export RELEASE_TAG="jamesmortensen1-v`echo $BRANCH`-`echo $BUILD_DATE`"' >> $BASH_ENV
             source $BASH_ENV
             echo "Workflow environment variables:"
             echo BRANCH="$BRANCH"
