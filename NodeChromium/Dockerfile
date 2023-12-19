@@ -6,17 +6,38 @@ LABEL authors=${AUTHORS}
 
 USER root
 
-# Install Chromium 
-# RUN echo "deb http://http.us.debian.org/debian/ stable non-free contrib main" >> /etc/apt/sources.list \
-RUN echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list \
+#============================================
+# Chromium and chromedriver from Debian
+# Available versions at: https://packages.debian.org/search?keywords=chromium
+#============================================
+COPY chromium.pref /etc/apt/preferences.d/chromium.pref
+
+ARG DEBIAN_VERSION=bullseye
+ARG REPO_FILE=/etc/apt/sources.list.d/debian.list
+ARG KEY_SERVER=keyserver.ubuntu.com
+ARG DEBIAN_KEY_LOCATION=/usr/share/keyrings/debian
+ARG CHROMIUM_VERSION=120.0.6099.109-1~deb11u1
+ARG CHROMEDIVER_VERSION=${CHROMIUM_VERSION}
+RUN mkdir /home/seluser/.gnupg && mkdir -p ${DEBIAN_KEY_LOCATION} \
+  && gpg --no-default-keyring --keyring ${DEBIAN_KEY_LOCATION}/${DEBIAN_VERSION}.gpg \
+         --keyserver ${KEY_SERVER} \
+         --recv-keys 0E98404D386FA1D9 \
+  && echo "deb [signed-by=${DEBIAN_KEY_LOCATION}/${DEBIAN_VERSION}.gpg] http://deb.debian.org/debian ${DEBIAN_VERSION} main" \
+          > ${REPO_FILE} \
+  && gpg --no-default-keyring --keyring ${DEBIAN_KEY_LOCATION}/${DEBIAN_VERSION}-updates.gpg \
+         --keyserver ${KEY_SERVER} \
+         --recv-keys 6ED0E7B82643E131 \
+  && echo "deb [signed-by=${DEBIAN_KEY_LOCATION}/${DEBIAN_VERSION}-updates.gpg] http://deb.debian.org/debian ${DEBIAN_VERSION}-updates main" \
+          >> ${REPO_FILE} \
+  && gpg --no-default-keyring --keyring ${DEBIAN_KEY_LOCATION}/security-${DEBIAN_VERSION}.gpg \
+         --keyserver ${KEY_SERVER} \
+         --recv-keys 112695A0E562B32A \
+  && echo "deb [signed-by=${DEBIAN_KEY_LOCATION}/security-${DEBIAN_VERSION}.gpg] http://deb.debian.org/debian-security ${DEBIAN_VERSION}-security main contrib non-free" \
+          >> ${REPO_FILE} \
   && apt-get update -qqy \
-  # && apt-get -qqy install chromium=89.0.4389.82-1 \
-  # && apt-get -qqy install chromium=90.0.4430.212-1 \
-  # && apt-get -qqy install chromium=93.0.4577.82-1 \
-  # && apt-get -qqy install chromium=97.0.4692.71-0.1 \
-  # && apt-get -qqy install chromium=98.0.4758.102-1+b1 \
-  && apt-get -qqy install chromium \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+  && apt-get -qqy --no-install-recommends install chromium=${CHROMIUM_VERSION} chromium-driver=${CHROMEDIVER_VERSION} \
+  && rm ${REPO_FILE} \
+  && rm -rf /home/seluser/.gnupg ${DEBIAN_KEY_LOCATION}/ /var/lib/apt/lists/* /var/cache/apt/*
 
 #=================================
 # Chromium Launch Script Wrapper
@@ -24,14 +45,11 @@ RUN echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list \
 COPY wrap_chromium_binary /opt/bin/wrap_chromium_binary
 RUN /opt/bin/wrap_chromium_binary
 
+USER ${SEL_UID}
+
 #============================================
-# Chromium webdriver
+# Dumping Browser information for config
 #============================================
-RUN apt-get update -qqy \
-  && apt-get -qqy install chromium-driver \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-
-RUN echo "chromium" > /opt/selenium/browser_name
-
-USER 1200
-
+RUN echo "chrome" > /opt/selenium/browser_name
+RUN chromium --version | awk '{print $2}' > /opt/selenium/browser_version
+RUN echo "\"goog:chromeOptions\": {\"binary\": \"/usr/bin/chromium\"}" > /opt/selenium/browser_binary_location
