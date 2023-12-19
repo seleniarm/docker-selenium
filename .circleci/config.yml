@@ -24,7 +24,7 @@ jobs:
         type: executor
     executor: << parameters.machine-type >>
     environment:
-      NAMESPACE: seleniarm
+      NAMESPACE: jamesmortensen1
       BUILD_DATE: today
     steps:
       - run:
@@ -149,7 +149,7 @@ jobs:
         type: executor
     executor: << parameters.machine-type >>
     environment:
-      NAMESPACE: seleniarm
+      NAMESPACE: jamesmortensen1
       BUILD_DATE: today
     steps:
       - checkout
@@ -239,7 +239,7 @@ jobs:
             docker tag ${IMAGE_NAME}:${ARM_TAG} ${ARM_IMAGE}
             docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
             echo "Login to Docker..."
-            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
+            echo "${DOCKER_TEST_PASSWORD}" | docker login --username "${DOCKER_TEST_USERNAME}" --password-stdin
             echo "Logged into Docker... now pushing manifests..."
             docker push ${ARM_IMAGE}
             docker push ${AMD_IMAGE}
@@ -286,7 +286,7 @@ jobs:
             MANIFEST_IMAGE=${IMAGE_NAME}:${MANIFEST_TAG}
             AMD_IMAGE=${IMAGE_NAME}_amd64:${MANIFEST_TAG}
             docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
-            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
+            echo "${DOCKER_TEST_PASSWORD}" | docker login --username "${DOCKER_TEST_USERNAME}" --password-stdin
             docker push ${AMD_IMAGE}
             docker manifest create ${MANIFEST_IMAGE} ${AMD_IMAGE}
             docker manifest push ${MANIFEST_IMAGE}
@@ -331,7 +331,7 @@ jobs:
             MANIFEST_IMAGE=${IMAGE_NAME}:${MANIFEST_TAG}
             AMD_IMAGE=${IMAGE_NAME}_amd64:${MANIFEST_TAG}
             docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
-            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
+            echo "${DOCKER_TEST_PASSWORD}" | docker login --username "${DOCKER_TEST_USERNAME}" --password-stdin
             docker push ${AMD_IMAGE}
             docker manifest create ${MANIFEST_IMAGE} ${AMD_IMAGE}
             docker manifest push ${MANIFEST_IMAGE}
@@ -401,7 +401,7 @@ jobs:
             echo "Login to Docker, and setup to use a buildx builder and push built multi-arch images"
             docker buildx use `docker buildx create`
             docker buildx ls
-            docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+            docker login -u="$DOCKER_TEST_USERNAME" -p="$DOCKER_TEST_PASSWORD"
             echo BRANCH="$BRANCH"
             echo BUILD_DATE="$BUILD_DATE"
             echo RELEASE_TAG="$RELEASE_TAG"
@@ -505,7 +505,7 @@ jobs:
             docker buildx ls
             # For release notes, we'll pull images anonymously without login.
             # if [ "$MAKE_TARGETS" != "tag_and_push_multi_arch_browser_images" ]; then
-            docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+            docker login -u="$DOCKER_TEST_USERNAME" -p="$DOCKER_TEST_PASSWORD"
             # fi
             echo BRANCH="$BRANCH"
             echo BUILD_DATE="$BUILD_DATE"
