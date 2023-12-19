@@ -141,6 +141,63 @@ jobs:
             ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
             USE_RANDOM_USER_ID=${USE_RANDOM_USER} NAMESPACE=${NAMESPACE} VERSION=${BRANCH}_${ARCH} BUILD_DATE=${BUILD_DATE} SKIP_BUILD=true make test_${ARCH}
 
+  test-video:
+    parameters:
+      platforms:
+        type: string
+      machine-type:
+        type: executor
+    executor: << parameters.machine-type >>
+    environment:
+      NAMESPACE: fhoeben
+      BUILD_DATE: today
+    steps:
+      - checkout
+      - run: uname -a
+      - run: docker info
+      - run:
+          name: "Use Python3 and pip3 instead of Python2.7"
+          command: |
+            echo "Use Python3 and pip3 instead of Python2.7"
+            sed -i 's/pip /pip3 /g' tests/bootstrap.sh
+            sed -i 's/python /python3 /g' tests/bootstrap.sh
+            sed -i 's/-m pip3 /-m pip /g' tests/bootstrap.sh
+      - run:
+          name: "Test and Build Docker images"
+          no_output_timeout: 2m
+          command: |
+            export USE_RANDOM_USER=false
+            export BRANCH=${CIRCLE_BRANCH//\//-}
+            ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
+            NAME=${NAMESPACE} USE_RANDOM_USER_ID=${USE_RANDOM_USER} NAMESPACE=${NAMESPACE} FFMPEG_TAG_VERSION=${BRANCH}_${ARCH} VERSION=${BRANCH}_${ARCH} BUILD_DATE=${BUILD_DATE} make test_video
+      - store_artifacts:
+          path: tests/videos
+      - run:
+          name: "Inspect Docker Images"
+          command: |
+            VERSION=${CIRCLE_BRANCH//\//-}
+            ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
+            export TAG=${VERSION}_${ARCH}-${BUILD_DATE}
+            echo "TAG is ${TAG}"
+            docker image inspect $NAMESPACE/video:$TAG
+      - run:
+          name: "Save Docker Image in Cache"
+          command: |
+            export VERSION=${CIRCLE_BRANCH//\//-}
+            ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
+            export TAG=${VERSION}_${ARCH}-${BUILD_DATE}
+            mkdir images
+            echo "TAG is ${TAG}"
+            echo $NAMESPACE/video:$TAG
+            docker save -o images/video.tar \
+              $NAMESPACE/video:$TAG
+      - save_cache:
+          key: video-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-<< parameters.platforms >>
+          paths:
+            - images
+      - store_artifacts:
+          path: images
+
   manifest-multi-arch:
     parameters:
       image-name:
@@ -216,6 +273,51 @@ jobs:
           command: |
             echo "CIRCLE_WORKFLOW_ID = " $CIRCLE_WORKFLOW_ID
             docker load -i images/amd64.tar
+      - run:
+          name: "Create manifest"
+          command: |
+            VERSION=${CIRCLE_BRANCH//\//-}
+            IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
+            echo "Creating ${IMAGE_NAME}:${MANIFEST_TAG} based on ${IMAGE_NAME}:${AMD_TAG}"
+            MANIFEST_IMAGE=${IMAGE_NAME}:${MANIFEST_TAG}
+            AMD_IMAGE=${IMAGE_NAME}_amd64:${MANIFEST_TAG}
+            docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
+            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
+            docker push ${AMD_IMAGE}
+            docker manifest create ${MANIFEST_IMAGE} ${AMD_IMAGE}
+            docker manifest push ${MANIFEST_IMAGE}
+      - run:
+          name: "Inspect manifest"
+          command: |
+            VERSION=${CIRCLE_BRANCH//\//-}
+            IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            docker manifest inspect ${IMAGE_NAME}:${MANIFEST_TAG}
+
+  manifest-amd-image:
+    parameters:
+      image-name:
+        type: string
+      machine-type:
+        type: executor
+    executor: << parameters.machine-type >>
+    environment:
+      NAMESPACE: fhoeben
+      BUILD_DATE: today
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - << parameters.image-name >>-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-linux/amd64
+      - run: uname -a
+      - run: docker info
+      - run:
+          name: "Load built images from cache into Docker"
+          command: |
+            echo "CIRCLE_WORKFLOW_ID = " $CIRCLE_WORKFLOW_ID
+            docker load -i images/<< parameters.image-name >>.tar
       - run:
           name: "Create manifest"
           command: |
@@ -477,6 +579,18 @@ workflows:
           matrix:
             parameters:
               image-name: [ node-chrome, standalone-chrome, node-edge, standalone-edge ]
+
+  build-and-test-video:
+    jobs:
+      -  test-video:
+           name: test-video-amd64
+           platforms: linux/amd64
+           machine-type: ubuntu2204amd64
+      - manifest-amd-image:
+          name: manifest-video-amd64
+          requires: [test-video-amd64]
+          machine-type: ubuntu2204amd64
+          image-name: video
 
   deploy-multi-arch-full-grid:
     jobs:
