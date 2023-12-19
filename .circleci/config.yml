@@ -149,7 +149,7 @@ jobs:
         type: executor
     executor: << parameters.machine-type >>
     environment:
-      NAMESPACE: fhoeben
+      NAMESPACE: seleniarm
       BUILD_DATE: today
     steps:
       - checkout
@@ -304,7 +304,7 @@ jobs:
         type: executor
     executor: << parameters.machine-type >>
     environment:
-      NAMESPACE: fhoeben
+      NAMESPACE: seleniarm
       BUILD_DATE: today
     steps:
       - checkout
