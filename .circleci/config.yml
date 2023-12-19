@@ -2,23 +2,23 @@
 version: 2.1
 
 executors:
-  ubuntu2004arm64:
+  ubuntu2204arm64:
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:current
     resource_class: arm-medium
-  ubuntu2004amd64:
+  ubuntu2204amd64:
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:current
     resource_class: medium
-  ubuntu2004arm64large:
+  ubuntu2204arm64large:
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:current
     resource_class: arm-large
 
 jobs:
   build-multi-arch:
     parameters:
-      platforms: 
+      platforms:
         type: string
       machine-type:
         type: executor
@@ -26,7 +26,6 @@ jobs:
     environment:
       NAMESPACE: seleniarm
       BUILD_DATE: today
-      PLATFORMS: << parameters.platforms >>
     steps:
       - run:
           name: "Prepare workflow environment variables"
@@ -43,34 +42,69 @@ jobs:
           name: "Build Docker images"
           command: |
             echo "Branch is $BRANCH"
-            NAME=${NAMESPACE} VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} PLATFORMS=${PLATFORMS} BUILD_ARGS=${BUILD_ARGS} make build_multi
+            ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
+            NAME=${NAMESPACE} VERSION=${BRANCH}_${ARCH} BUILD_DATE=${BUILD_DATE} BUILD_ARGS=${BUILD_ARGS} make all_${ARCH}
+      - run:
+          name: "Inspect Docker Images"
+          command: |
+            VERSION=${CIRCLE_BRANCH//\//-}
+            ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
+            export TAG=${VERSION}_${ARCH}-${BUILD_DATE}
+            echo "TAG is ${TAG}"
+            docker image inspect $NAMESPACE/base:$TAG
+            docker image inspect $NAMESPACE/node-base:$TAG
+            docker image inspect $NAMESPACE/hub:$TAG
+            docker image inspect $NAMESPACE/node-chromium:$TAG
+            docker image inspect $NAMESPACE/standalone-chromium:$TAG
+            docker image inspect $NAMESPACE/node-firefox:$TAG
+            docker image inspect $NAMESPACE/standalone-firefox:$TAG
+            if [ "${ARCH}" = "amd64" ]; then
+              docker image inspect $NAMESPACE/node-chrome:$TAG
+              docker image inspect $NAMESPACE/standalone-chrome:$TAG
+              docker image inspect $NAMESPACE/node-edge:$TAG
+              docker image inspect $NAMESPACE/standalone-edge:$TAG
+            fi
       - run:
           name: "Save Docker Images in Cache"
           command: |  
             export VERSION=${CIRCLE_BRANCH//\//-}
-            echo $NAMESPACE/base:$VERSION-$BUILD_DATE 
-            echo $NAMESPACE/node-base:$VERSION-$BUILD_DATE 
-            echo $NAMESPACE/hub:$VERSION-$BUILD_DATE 
-            echo $NAMESPACE/node-chromium:$VERSION-$BUILD_DATE 
-            echo $NAMESPACE/standalone-chromium:$VERSION-$BUILD_DATE 
-            echo $NAMESPACE/node-firefox:$VERSION-$BUILD_DATE 
-            echo $NAMESPACE/standalone-firefox:$VERSION-$BUILD_DATE 
-            docker save -o multi-arch-images.tar \
-              $NAMESPACE/base:$VERSION-$BUILD_DATE \
-              $NAMESPACE/node-base:$VERSION-$BUILD_DATE \
-              $NAMESPACE/hub:$VERSION-$BUILD_DATE \
-              $NAMESPACE/node-chromium:$VERSION-$BUILD_DATE \
-              $NAMESPACE/standalone-chromium:$VERSION-$BUILD_DATE \
-              $NAMESPACE/node-firefox:$VERSION-$BUILD_DATE \
-              $NAMESPACE/standalone-firefox:$VERSION-$BUILD_DATE
+            ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
+            export TAG=${VERSION}_${ARCH}-${BUILD_DATE}
+            mkdir images
+            echo "TAG is ${TAG}"
+            echo $NAMESPACE/base:$TAG
+            echo $NAMESPACE/node-base:$TAG
+            echo $NAMESPACE/hub:$TAG
+            echo $NAMESPACE/node-chromium:$TAG
+            echo $NAMESPACE/standalone-chromium:$TAG
+            echo $NAMESPACE/node-firefox:$TAG
+            echo $NAMESPACE/standalone-firefox:$TAG
+            if [ "${ARCH}" = "amd64" ]; then
+              echo $NAMESPACE/node-chrome:$TAG
+              echo $NAMESPACE/standalone-chrome:$TAG
+              echo $NAMESPACE/node-edge:$TAG
+              echo $NAMESPACE/standalone-edge:$TAG
+            fi
+            docker save -o images/${ARCH}.tar \
+              $NAMESPACE/base:$TAG\
+              $NAMESPACE/node-base:$TAG\
+              $NAMESPACE/hub:$TAG\
+              $NAMESPACE/node-chromium:$TAG\
+              $NAMESPACE/standalone-chromium:$TAG\
+              $NAMESPACE/node-firefox:$TAG\
+              $NAMESPACE/standalone-firefox:$TAG\
+              $(if [ "${ARCH}" = "amd64" ]; then echo "$NAMESPACE/node-chrome:$TAG $NAMESPACE/standalone-chrome:$TAG"; fi) \
+              $(if [ "${ARCH}" = "amd64" ]; then echo "$NAMESPACE/node-edge:$TAG $NAMESPACE/standalone-edge:$TAG"; fi)
       - save_cache:
           key: multi-arch-images-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-<< parameters.platforms >>
-          paths: 
-            - multi-arch-images.tar
+          paths:
+            - images
+      - store_artifacts:
+          path: images
 
   test-multi-arch:
     parameters:
-      platforms: 
+      platforms:
         type: string
       machine-type:
         type: executor
@@ -81,7 +115,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: 
+          keys:
             - multi-arch-images-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-<< parameters.platforms >>
       - run: uname -a
       - run: docker info
@@ -89,7 +123,8 @@ jobs:
           name: "Load built images from cache into Docker"
           command: |
             echo "CIRCLE_WORKFLOW_ID = " $CIRCLE_WORKFLOW_ID
-            docker load -i multi-arch-images.tar
+            ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
+            docker load -i images/${ARCH}.tar
       - run:
           name: "Use Python3 and pip3 instead of Python2.7"
           command: |
@@ -97,17 +132,218 @@ jobs:
             sed -i 's/pip /pip3 /g' tests/bootstrap.sh
             sed -i 's/python /python3 /g' tests/bootstrap.sh
             sed -i 's/-m pip3 /-m pip /g' tests/bootstrap.sh
-      - run: 
+      - run:
           name: "Test Docker images"
           no_output_timeout: 2m
           command: |
             export USE_RANDOM_USER=false
             export BRANCH=${CIRCLE_BRANCH//\//-}
-            USE_RANDOM_USER_ID=${USE_RANDOM_USER} NAMESPACE=${NAMESPACE} VERSION=${BRANCH} BUILD_DATE=${BUILD_DATE} SKIP_BUILD=true make test_multi_arch
+            ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
+            USE_RANDOM_USER_ID=${USE_RANDOM_USER} NAMESPACE=${NAMESPACE} VERSION=${BRANCH}_${ARCH} BUILD_DATE=${BUILD_DATE} SKIP_BUILD=true make test_${ARCH}
+
+  test-video:
+    parameters:
+      platforms:
+        type: string
+      machine-type:
+        type: executor
+    executor: << parameters.machine-type >>
+    environment:
+      NAMESPACE: seleniarm
+      BUILD_DATE: today
+    steps:
+      - checkout
+      - run: uname -a
+      - run: docker info
+      - run:
+          name: "Use Python3 and pip3 instead of Python2.7"
+          command: |
+            echo "Use Python3 and pip3 instead of Python2.7"
+            sed -i 's/pip /pip3 /g' tests/bootstrap.sh
+            sed -i 's/python /python3 /g' tests/bootstrap.sh
+            sed -i 's/-m pip3 /-m pip /g' tests/bootstrap.sh
+      - run:
+          name: "Test and Build Docker images"
+          no_output_timeout: 2m
+          command: |
+            export USE_RANDOM_USER=false
+            export BRANCH=${CIRCLE_BRANCH//\//-}
+            ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
+            NAME=${NAMESPACE} USE_RANDOM_USER_ID=${USE_RANDOM_USER} NAMESPACE=${NAMESPACE} FFMPEG_TAG_VERSION=${BRANCH}_${ARCH} VERSION=${BRANCH}_${ARCH} BUILD_DATE=${BUILD_DATE} make test_video
+      - store_artifacts:
+          path: tests/videos
+      - run:
+          name: "Inspect Docker Images"
+          command: |
+            VERSION=${CIRCLE_BRANCH//\//-}
+            ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
+            export TAG=${VERSION}_${ARCH}-${BUILD_DATE}
+            echo "TAG is ${TAG}"
+            docker image inspect $NAMESPACE/video:$TAG
+      - run:
+          name: "Save Docker Image in Cache"
+          command: |
+            export VERSION=${CIRCLE_BRANCH//\//-}
+            ARCH=$(echo << parameters.platforms >> | sed 's/linux\///')
+            export TAG=${VERSION}_${ARCH}-${BUILD_DATE}
+            mkdir images
+            echo "TAG is ${TAG}"
+            echo $NAMESPACE/video:$TAG
+            docker save -o images/video.tar \
+              $NAMESPACE/video:$TAG
+      - save_cache:
+          key: video-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-<< parameters.platforms >>
+          paths:
+            - images
+      - store_artifacts:
+          path: images
+
+  manifest-multi-arch:
+    parameters:
+      image-name:
+        type: string
+      machine-type:
+        type: executor
+    executor: << parameters.machine-type >>
+    environment:
+      NAMESPACE: seleniarm
+      BUILD_DATE: today
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - multi-arch-images-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-linux/arm64
+      - restore_cache:
+          keys:
+            - multi-arch-images-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-linux/amd64
+      - run: uname -a
+      - run: docker info
+      - run:
+          name: "Load built images from cache into Docker"
+          command: |
+            echo "CIRCLE_WORKFLOW_ID = " $CIRCLE_WORKFLOW_ID
+            docker load -i images/arm64.tar
+            docker load -i images/amd64.tar
+      - run:
+          name: "Create manifest"
+          command: |
+            VERSION=${CIRCLE_BRANCH//\//-}
+            IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            ARM_TAG=${VERSION}_arm64-${BUILD_DATE}
+            AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
+            echo "Creating ${IMAGE_NAME}:${MANIFEST_TAG} based on ${IMAGE_NAME}:${ARM_TAG} and ${IMAGE_NAME}:${AMD_TAG}"
+            MANIFEST_IMAGE=${IMAGE_NAME}:${MANIFEST_TAG}
+            ARM_IMAGE=${IMAGE_NAME}_arm64:${MANIFEST_TAG}
+            AMD_IMAGE=${IMAGE_NAME}_amd64:${MANIFEST_TAG}
+            docker tag ${IMAGE_NAME}:${ARM_TAG} ${ARM_IMAGE}
+            docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
+            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
+            docker push ${ARM_IMAGE}
+            docker push ${AMD_IMAGE}
+            docker manifest create ${MANIFEST_IMAGE} ${ARM_IMAGE} ${AMD_IMAGE}
+            docker manifest push ${MANIFEST_IMAGE}
+      - run:
+          name: "Inspect manifest"
+          command: |
+            VERSION=${CIRCLE_BRANCH//\//-}
+            IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            docker manifest inspect ${IMAGE_NAME}:${MANIFEST_TAG}
+
+  manifest-amd-only-arch:
+    parameters:
+      image-name:
+        type: string
+      machine-type:
+        type: executor
+    executor: << parameters.machine-type >>
+    environment:
+      NAMESPACE: seleniarm
+      BUILD_DATE: today
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - multi-arch-images-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-linux/amd64
+      - run: uname -a
+      - run: docker info
+      - run:
+          name: "Load built images from cache into Docker"
+          command: |
+            echo "CIRCLE_WORKFLOW_ID = " $CIRCLE_WORKFLOW_ID
+            docker load -i images/amd64.tar
+      - run:
+          name: "Create manifest"
+          command: |
+            VERSION=${CIRCLE_BRANCH//\//-}
+            IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
+            echo "Creating ${IMAGE_NAME}:${MANIFEST_TAG} based on ${IMAGE_NAME}:${AMD_TAG}"
+            MANIFEST_IMAGE=${IMAGE_NAME}:${MANIFEST_TAG}
+            AMD_IMAGE=${IMAGE_NAME}_amd64:${MANIFEST_TAG}
+            docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
+            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
+            docker push ${AMD_IMAGE}
+            docker manifest create ${MANIFEST_IMAGE} ${AMD_IMAGE}
+            docker manifest push ${MANIFEST_IMAGE}
+      - run:
+          name: "Inspect manifest"
+          command: |
+            VERSION=${CIRCLE_BRANCH//\//-}
+            IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            docker manifest inspect ${IMAGE_NAME}:${MANIFEST_TAG}
+
+  manifest-amd-image:
+    parameters:
+      image-name:
+        type: string
+      machine-type:
+        type: executor
+    executor: << parameters.machine-type >>
+    environment:
+      NAMESPACE: seleniarm
+      BUILD_DATE: today
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - << parameters.image-name >>-{{ .Branch }}-{{ .Environment.CIRCLE_WORKFLOW_ID }}-linux/amd64
+      - run: uname -a
+      - run: docker info
+      - run:
+          name: "Load built images from cache into Docker"
+          command: |
+            echo "CIRCLE_WORKFLOW_ID = " $CIRCLE_WORKFLOW_ID
+            docker load -i images/<< parameters.image-name >>.tar
+      - run:
+          name: "Create manifest"
+          command: |
+            VERSION=${CIRCLE_BRANCH//\//-}
+            IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
+            echo "Creating ${IMAGE_NAME}:${MANIFEST_TAG} based on ${IMAGE_NAME}:${AMD_TAG}"
+            MANIFEST_IMAGE=${IMAGE_NAME}:${MANIFEST_TAG}
+            AMD_IMAGE=${IMAGE_NAME}_amd64:${MANIFEST_TAG}
+            docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
+            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
+            docker push ${AMD_IMAGE}
+            docker manifest create ${MANIFEST_IMAGE} ${AMD_IMAGE}
+            docker manifest push ${MANIFEST_IMAGE}
+      - run:
+          name: "Inspect manifest"
+          command: |
+            VERSION=${CIRCLE_BRANCH//\//-}
+            IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            docker manifest inspect ${IMAGE_NAME}:${MANIFEST_TAG}
 
   deploy-multi-arch:
     parameters:
-      platforms: 
+      platforms:
         type: string
       build-args:
         type: string
@@ -187,7 +423,7 @@ jobs:
 
   deploy-multi-arch-full-grid:
     parameters:
-      platforms: 
+      platforms:
         type: string
       build-args:
         type: string
@@ -314,21 +550,47 @@ workflows:
       - build-multi-arch:
           name: build-multi-arch-arm64
           platforms: linux/arm64
-          machine-type: ubuntu2004arm64
+          machine-type: ubuntu2204arm64
       - build-multi-arch:
           name: build-multi-arch-amd64
           platforms: linux/amd64
-          machine-type: ubuntu2004amd64
+          machine-type: ubuntu2204amd64
       - test-multi-arch:
           name: test-multi-arch-arm64
           requires: [build-multi-arch-arm64]
           platforms: linux/arm64
-          machine-type: ubuntu2004arm64
+          machine-type: ubuntu2204arm64
       - test-multi-arch:
           name: test-multi-arch-amd64
           requires: [build-multi-arch-amd64]
           platforms: linux/amd64
-          machine-type: ubuntu2004amd64
+          machine-type: ubuntu2204amd64
+      - manifest-multi-arch:
+          name: manifest-multi-arch-<< matrix.image-name >>
+          requires: [test-multi-arch-arm64, test-multi-arch-amd64]
+          machine-type: ubuntu2204amd64
+          matrix:
+            parameters:
+              image-name: [ base, node-base, hub, node-chromium, standalone-chromium, node-firefox, standalone-firefox ]
+      - manifest-amd-only-arch:
+          name: manifest-amd-arch-<< matrix.image-name >>
+          requires: [test-multi-arch-amd64]
+          machine-type: ubuntu2204amd64
+          matrix:
+            parameters:
+              image-name: [ node-chrome, standalone-chrome, node-edge, standalone-edge ]
+
+  build-and-test-video:
+    jobs:
+      -  test-video:
+           name: test-video-amd64
+           platforms: linux/amd64
+           machine-type: ubuntu2204amd64
+      - manifest-amd-image:
+          name: manifest-video-amd64
+          requires: [test-video-amd64]
+          machine-type: ubuntu2204amd64
+          image-name: video
 
   deploy-multi-arch-full-grid:
     jobs:
@@ -337,10 +599,10 @@ workflows:
           platforms: linux/arm64,linux/amd64,linux/arm/v7
           build-args: --push
           make-targets: base_multi
-          machine-type: ubuntu2004arm64large
-          filters: 
-            branches: 
-              only: 
+          machine-type: ubuntu2204arm64large
+          filters:
+            branches:
+              only:
                 - trunk
       - deploy-multi-arch-full-grid:
           name: deploy-multi-arch-full-grid
@@ -348,10 +610,10 @@ workflows:
           platforms: linux/arm64,linux/amd64,linux/arm/v7
           build-args: --push
           make-targets: grid_multi
-          machine-type: ubuntu2004arm64
-          filters: 
-            branches: 
-              only: 
+          machine-type: ubuntu2204arm64
+          filters:
+            branches:
+              only:
                 - trunk
       - deploy-multi-arch-full-grid:
           name: deploy-multi-arch-node-base
@@ -359,10 +621,10 @@ workflows:
           platforms: linux/arm64,linux/amd64,linux/arm/v7
           build-args: --push
           make-targets: node_base_multi
-          machine-type: ubuntu2004arm64large
-          filters: 
-            branches: 
-              only: 
+          machine-type: ubuntu2204arm64large
+          filters:
+            branches:
+              only:
                 - trunk
       - deploy-multi-arch-full-grid:
           name: deploy-multi-arch-firefox
@@ -370,10 +632,10 @@ workflows:
           platforms: linux/arm64,linux/amd64,linux/arm/v7
           build-args: --push
           make-targets: firefox_multi
-          machine-type: ubuntu2004arm64large
-          filters: 
-            branches: 
-              only: 
+          machine-type: ubuntu2204arm64large
+          filters:
+            branches:
+              only:
                 - trunk
       - deploy-multi-arch-full-grid:
           name: deploy-multi-arch-chromium
@@ -381,10 +643,10 @@ workflows:
           platforms: linux/arm64,linux/amd64,linux/arm/v7
           build-args: --push
           make-targets: chromium_multi
-          machine-type: ubuntu2004arm64large
-          filters: 
-            branches: 
-              only: 
+          machine-type: ubuntu2204arm64large
+          filters:
+            branches:
+              only:
                 - trunk
       - deploy-multi-arch-full-grid:
           name: deploy-multi-arch-release-notes
@@ -392,8 +654,8 @@ workflows:
           platforms: linux/arm64,linux/amd64,linux/arm/v7
           build-args: --push
           make-targets: tag_and_push_multi_arch_browser_images
-          machine-type: ubuntu2004arm64
-          filters: 
-            branches: 
-              only: 
+          machine-type: ubuntu2204arm64
+          filters:
+            branches:
+              only:
                 - trunk
