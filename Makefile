@@ -403,6 +403,7 @@ test_video: video hub chrome firefox edge chromium
 			cd ./tests || true ; \
 			echo VIDEO_TAG=$(FFMPEG_TAG_VERSION)-$(BUILD_DATE) > .env ; \
 			echo TAG=$(TAG_VERSION) >> .env ; \
+			echo NAME=$(NAME) >> .env ; \
 			echo NODE=$$node >> .env ; \
 			if [ $$node = "NodeChrome" ] ; then \
 					echo BROWSER=chrome >> .env ; \
