@@ -234,8 +234,9 @@ jobs:
             AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
             echo "Creating ${IMAGE_NAME}:${MANIFEST_TAG} based on ${IMAGE_NAME}:${ARM_TAG} and ${IMAGE_NAME}:${AMD_TAG}"
             MANIFEST_IMAGE=${IMAGE_NAME}:${MANIFEST_TAG}
-            ARM_IMAGE=${IMAGE_NAME}_arm64:${MANIFEST_TAG}
-            AMD_IMAGE=${IMAGE_NAME}_amd64:${MANIFEST_TAG}
+            TEMP_PREFIX=$NAMESPACE/temp:${MANIFEST_TAG}-<< parameters.image-name >>
+            ARM_IMAGE=${TEMP_PREFIX}-arm64
+            AMD_IMAGE=${TEMP_PREFIX}-amd64
             docker tag ${IMAGE_NAME}:${ARM_TAG} ${ARM_IMAGE}
             docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
             echo "Login to Docker..."
@@ -284,7 +285,8 @@ jobs:
             AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
             echo "Creating ${IMAGE_NAME}:${MANIFEST_TAG} based on ${IMAGE_NAME}:${AMD_TAG}"
             MANIFEST_IMAGE=${IMAGE_NAME}:${MANIFEST_TAG}
-            AMD_IMAGE=${IMAGE_NAME}_amd64:${MANIFEST_TAG}
+            TEMP_PREFIX=$NAMESPACE/temp:${MANIFEST_TAG}-<< parameters.image-name >>
+            AMD_IMAGE=${TEMP_PREFIX}-amd64
             docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
             echo "${DOCKER_TEST_PASSWORD}" | docker login --username "${DOCKER_TEST_USERNAME}" --password-stdin
             docker push ${AMD_IMAGE}
@@ -329,7 +331,8 @@ jobs:
             AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
             echo "Creating ${IMAGE_NAME}:${MANIFEST_TAG} based on ${IMAGE_NAME}:${AMD_TAG}"
             MANIFEST_IMAGE=${IMAGE_NAME}:${MANIFEST_TAG}
-            AMD_IMAGE=${IMAGE_NAME}_amd64:${MANIFEST_TAG}
+            TEMP_PREFIX=$NAMESPACE/temp:${MANIFEST_TAG}-<< parameters.image-name >>
+            AMD_IMAGE=${TEMP_PREFIX}-amd64
             docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
             echo "${DOCKER_TEST_PASSWORD}" | docker login --username "${DOCKER_TEST_USERNAME}" --password-stdin
             docker push ${AMD_IMAGE}
