@@ -238,7 +238,9 @@ jobs:
             AMD_IMAGE=${IMAGE_NAME}_amd64:${MANIFEST_TAG}
             docker tag ${IMAGE_NAME}:${ARM_TAG} ${ARM_IMAGE}
             docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
+            echo "Login to Docker..."
             echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
+            echo "Logged into Docker... now pushing manifests..."
             docker push ${ARM_IMAGE}
             docker push ${AMD_IMAGE}
             docker manifest create ${MANIFEST_IMAGE} ${ARM_IMAGE} ${AMD_IMAGE}
