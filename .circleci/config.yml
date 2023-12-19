@@ -170,23 +170,28 @@ jobs:
       - run:
           name: "Create manifest"
           command: |
-            export VERSION=${CIRCLE_BRANCH//\//-}
-            export IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
-            export MANIFEST_TAG=${VERSION}-${BUILD_DATE}
-            export ARM_TAG=${VERSION}_arm64-${BUILD_DATE}
-            export AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
+            VERSION=${CIRCLE_BRANCH//\//-}
+            IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            ARM_TAG=${VERSION}_arm64-${BUILD_DATE}
+            AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
             echo "Creating ${IMAGE_NAME}:${MANIFEST_TAG} based on ${IMAGE_NAME}:${ARM_TAG} and ${IMAGE_NAME}:${AMD_TAG}"
+            MANIFEST_IMAGE=${IMAGE_NAME}:${MANIFEST_TAG}
+            ARM_IMAGE=${IMAGE_NAME}_arm64:${MANIFEST_TAG}
+            AMD_IMAGE=${IMAGE_NAME}_amd64:${MANIFEST_TAG}
+            docker tag ${IMAGE_NAME}:${ARM_TAG} ${ARM_IMAGE}
+            docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
             echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
-            docker push ${IMAGE_NAME}:${ARM_TAG}
-            docker push ${IMAGE_NAME}:${AMD_TAG}
-            docker manifest create ${IMAGE_NAME}:${MANIFEST_TAG} ${IMAGE_NAME}:${ARM_TAG} ${IMAGE_NAME}:${AMD_TAG}
-            docker manifest push ${IMAGE_NAME}:${MANIFEST_TAG}
+            docker push ${ARM_IMAGE}
+            docker push ${AMD_IMAGE}
+            docker manifest create ${MANIFEST_IMAGE} ${ARM_IMAGE} ${AMD_IMAGE}
+            docker manifest push ${MANIFEST_IMAGE}
       - run:
           name: "Inspect manifest"
           command: |
-            export VERSION=${CIRCLE_BRANCH//\//-}
-            export IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
-            export MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            VERSION=${CIRCLE_BRANCH//\//-}
+            IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            MANIFEST_TAG=${VERSION}-${BUILD_DATE}
             docker manifest inspect ${IMAGE_NAME}:${MANIFEST_TAG}
 
   manifest-amd-only-arch:
@@ -214,21 +219,24 @@ jobs:
       - run:
           name: "Create manifest"
           command: |
-            export VERSION=${CIRCLE_BRANCH//\//-}
-            export IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
-            export MANIFEST_TAG=${VERSION}-${BUILD_DATE}
-            export AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
+            VERSION=${CIRCLE_BRANCH//\//-}
+            IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            AMD_TAG=${VERSION}_amd64-${BUILD_DATE}
             echo "Creating ${IMAGE_NAME}:${MANIFEST_TAG} based on ${IMAGE_NAME}:${AMD_TAG}"
+            MANIFEST_IMAGE=${IMAGE_NAME}:${MANIFEST_TAG}
+            AMD_IMAGE=${IMAGE_NAME}_amd64:${MANIFEST_TAG}
+            docker tag ${IMAGE_NAME}:${AMD_TAG} ${AMD_IMAGE}
             echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
-            docker push ${IMAGE_NAME}:${AMD_TAG}
-            docker manifest create ${IMAGE_NAME}:${MANIFEST_TAG} ${IMAGE_NAME}:${AMD_TAG}
-            docker manifest push ${IMAGE_NAME}:${MANIFEST_TAG}
+            docker push ${AMD_IMAGE}
+            docker manifest create ${MANIFEST_IMAGE} ${AMD_IMAGE}
+            docker manifest push ${MANIFEST_IMAGE}
       - run:
           name: "Inspect manifest"
           command: |
-            export VERSION=${CIRCLE_BRANCH//\//-}
-            export IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
-            export MANIFEST_TAG=${VERSION}-${BUILD_DATE}
+            VERSION=${CIRCLE_BRANCH//\//-}
+            IMAGE_NAME=$NAMESPACE/<< parameters.image-name >>
+            MANIFEST_TAG=${VERSION}-${BUILD_DATE}
             docker manifest inspect ${IMAGE_NAME}:${MANIFEST_TAG}
 
   deploy-multi-arch:
