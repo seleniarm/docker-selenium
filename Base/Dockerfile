@@ -121,7 +121,7 @@ COPY supervisord.conf /etc
 RUN mkdir -p /opt/selenium /opt/selenium/assets /var/run/supervisor /var/log/supervisor ${SEL_DOWNLOAD_DIR} ${HOME}/.mozilla ${HOME}/.vnc \
   && touch /opt/selenium/config.toml \
   && chown -R ${SEL_USER}:${SEL_GROUP} /opt/selenium /var/run/supervisor /var/log/supervisor /etc/passwd ${HOME} \
-  && chmod -R 775 /opt/selenium /var/run/supervisor /var/log/supervisor /etc/passwd ${HOME} \
+  && chmod -R 777 /opt/selenium /var/run/supervisor /var/log/supervisor /etc/passwd ${HOME} \
   && wget --no-verbose https://github.com/SeleniumHQ/selenium/releases/download/${RELEASE}/selenium-server-${VERSION}.jar \
     -O /opt/selenium/selenium-server.jar \
   && echo "${SEL_PASSWD}" > /opt/selenium/initialPasswd \
@@ -140,10 +140,10 @@ RUN if [ `arch` = "aarch64" ]; then \
     curl -fL https://github.com/coursier/launchers/raw/master/cs-`arch`-pc-linux.gz | gzip -d > /tmp/cs \
   && chmod +x /tmp/cs \
   && mkdir -p /external_jars \
-  && chmod -R 775 /external_jars ; \
+  && chmod -R 777 /external_jars ; \
     fi
 
-RUN if [ -f "/tmp/cs" ]; then \ 
+RUN if [ -f "/tmp/cs" ]; then \
     /tmp/cs fetch --classpath --cache /external_jars \
     io.opentelemetry:opentelemetry-exporter-otlp:${OPENTELEMETRY_VERSION} \
     io.opentelemetry:opentelemetry-exporter-jaeger:${OPENTELEMETRY_VERSION} \

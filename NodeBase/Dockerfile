@@ -129,7 +129,7 @@ RUN mkdir -p ${HOME}/.vnc \
 #==========
 # Relaxing permissions for OpenShift and other non-sudo environments
 #==========
-RUN chmod -R 775 ${HOME} /tmp/.X11-unix \
+RUN chmod -R 777 ${HOME} /tmp/.X11-unix \
   && chgrp -R 0 ${HOME} /tmp/.X11-unix \
   && chmod -R g=u ${HOME} /tmp/.X11-unix
 
