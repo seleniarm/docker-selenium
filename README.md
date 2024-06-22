@@ -1,4 +1,6 @@
+The fork was merged into the main project [Docker Selenium](https://github.com/SeleniumHQ/docker-selenium) and published multi-arch images on [Selenium](https://hub.docker.com/r/selenium/) Docker Hub registry. [Read more](https://www.selenium.dev/blog/2024/multi-arch-images-via-docker-selenium/).
 
+---
 # Docker images for Selenium, built for Debian ARM64, ARM/v7, and AMD64 
 
 [![seleniumhq-community](https://circleci.com/gh/seleniumhq-community/docker-seleniarm.svg?style=shield)](https://app.circleci.com/pipelines/github/seleniumhq-community/docker-seleniarm)
